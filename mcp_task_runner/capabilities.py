@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Iterable
 
 
@@ -86,6 +88,14 @@ def choose_model(candidates: Iterable[ModelCandidate], requirements: TaskRequire
             candidate.latency_ms if candidate.latency_ms is not None else 10_000,
         ),
     )
+
+
+def load_model_profiles(path: str | Path) -> list[ModelProfile]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    models = payload.get("models", [])
+    if not isinstance(models, list):
+        raise ValueError("models must be a list")
+    return [profile_from_dict(item) for item in models]
 
 
 def profile_from_dict(data: dict) -> ModelProfile:

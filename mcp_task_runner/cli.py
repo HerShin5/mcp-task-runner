@@ -10,17 +10,16 @@ from typing import Sequence
 from .approvals import ApprovalStore, LocalApprovalGateway
 from .core import EvidenceLog, RiskLevel, TaskRunner, ToolRegistry, ToolSpec, VerificationResult
 from .mcp_http import McpEndpoint, StreamableHttpMcpClient
-from .providers import check_provider, choose_first_healthy, load_provider_configs
+from .providers import ProviderConfig, ProviderHealth, check_provider, choose_first_healthy, load_provider_configs
 from .planner import PlanValidationError, parse_and_validate
-from .routing import RouteObjective, load_route_pricing, select_route
+from .model_client import ModelClientError, ModelReply, OpenAICompatibleClient
+from .routing import PricingBand, RouteObjective, RoutePricing, load_route_pricing, select_route
 from .windows_diagnostics import build_read_only_plan, discover_endpoint
-from .capabilities import ModelProfile
-from .model_client import ModelReply
-from .model_routing import choose_model_and_gateway
+from .capabilities import ModelProfile, load_model_profiles
 from .classifier import HeuristicTaskClassifier
+from .model_routing import choose_model_and_gateway
 from .orchestrator import plan_with_route
-from .providers import ProviderHealth, ProviderConfig
-from .routing import PricingBand, RoutePricing
+from .quality import QualityAssessment
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,6 +49,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = sub.add_parser("plan-validate", help="validate an AI-generated JSON plan against the tool registry")
     validate.add_argument("plan", type=Path)
+
+    live_plan = sub.add_parser("live-plan", help="select a route and generate a plan without executing tools")
+    live_plan.add_argument("goal", nargs="+")
+    live_plan.add_argument("--providers", default="providers.json")
+    live_plan.add_argument("--profiles", default="model_profiles.example.json")
+    live_plan.add_argument("--input-tokens", type=int, default=4000)
+    live_plan.add_argument("--output-tokens", type=int, default=1000)
 
     return parser
 
@@ -193,6 +199,59 @@ def run(argv: Sequence[str] | None = None) -> int:
             print(json.dumps({"valid": False, "error": str(exc)}, ensure_ascii=False))
             return 2
         print(json.dumps({"valid": True, "plan": plan.to_dict()}, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "live-plan":
+        goal = " ".join(args.goal)
+        providers = load_provider_configs(args.providers)
+        profiles = load_model_profiles(args.profiles)
+        health = [check_provider(provider) for provider in providers]
+        pricing = load_route_pricing(args.providers)
+        registry = ToolRegistry()
+        registry.register(ToolSpec("health", "read-only health check", RiskLevel.READ_ONLY, True))
+        registry.register(ToolSpec("inspect_repository", "read-only repository inspection", RiskLevel.READ_ONLY, True))
+        requirements = HeuristicTaskClassifier().classify(goal)
+        quality: list[QualityAssessment] = []
+        decision = choose_model_and_gateway(
+            profiles, providers, health, pricing, requirements,
+            input_tokens=args.input_tokens, output_tokens=args.output_tokens, quality=quality,
+        )
+        if decision.selected is None:
+            print(json.dumps({"error": "no capable healthy model/gateway route"}, ensure_ascii=False))
+            return 2
+        selected = decision.selected
+        client = OpenAICompatibleClient(
+            base_url=selected.provider.base_url,
+            api_key=selected.provider.api_key,
+            provider=selected.provider.name,
+            model=selected.model.name,
+        )
+        try:
+            result = plan_with_route(
+                user_goal=goal,
+                classifier=HeuristicTaskClassifier(),
+                profiles=profiles,
+                providers=providers,
+                health=health,
+                pricing=pricing,
+                registry=registry,
+                client_factory=lambda _: client,
+                input_tokens=args.input_tokens,
+                output_tokens=args.output_tokens,
+            )
+        except (ModelClientError, PlanValidationError) as exc:
+            print(json.dumps({"error": "model_plan_rejected", "detail": str(exc)}, ensure_ascii=False))
+            return 2
+        print(json.dumps({
+            "selected_model": result.model,
+            "selected_gateway": result.provider,
+            "task_type": result.decision.task_requirements.task_type,
+            "requirements": result.decision.task_requirements.minimum,
+            "usage": result.usage,
+            "latency_ms": result.latency_ms,
+            "plan": result.plan.to_dict(),
+            "execution": "not_started",
+        }, ensure_ascii=False, indent=2))
         return 0
 
     return 2

@@ -45,3 +45,10 @@ def test_plan_validate_cli(tmp_path, capsys):
     assert run(["plan-validate", str(plan)]) == 0
     output = json.loads(capsys.readouterr().out)
     assert output["valid"] is True
+
+
+def test_live_plan_without_real_gateway_returns_safe_error(tmp_path, capsys):
+    providers = tmp_path / "providers.json"
+    providers.write_text('{"providers": []}', encoding="utf-8")
+    assert run(["live-plan", "检查", "服务", "--providers", str(providers)]) == 2
+    assert json.loads(capsys.readouterr().out)["error"] == "no capable healthy model/gateway route"

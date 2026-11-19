@@ -59,7 +59,9 @@
 - Added offline `orchestrate-demo`: task classifier -> model+gateway selector -> simulated model plan -> trusted plan validation.
 - Fixed an integration contract bug where `RoutedPlan` dropped task requirements; the result now preserves both requirements and selected route.
 - Demo evidence: ops task selected `gpt-terra@gateway-quality`; simple summary selected `gpt-astra@gateway-low`; both made no network requests.
-- Verification: `python -m pytest -q` -> 45 passed.
+- Verification: `python -m pytest -q` -> 46 passed.
+- Live-plan hardening: planner now includes the trusted tool catalog and strict system schema; CLI catches model/plan rejection without dumping raw provider content.
+- Real Qiao live-plan rerun succeeded: selected `gpt-6.1-sol@Qiao`, returned a two-step read-only health/repository inspection plan, and stopped with `execution=not_started`.
 - GitHub repository created: `https://github.com/HerShin5/mcp-task-runner`.
 - Local Git identity configured for this repository only; private gateway configuration remains ignored.
 - Published `main` at commit `5d253ec` after sanitizing private gateway references; remote branch verified.

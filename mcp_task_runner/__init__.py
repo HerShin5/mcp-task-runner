@@ -8,7 +8,7 @@ from .routing import PricingBand, RouteCandidate, RouteDecision, RouteObjective,
 from .gateway_catalog import GatewayCatalog, GatewaySnapshot
 from .balance import BalanceAlert, BalancePolicy, BalanceSeverity, BalanceSnapshot, evaluate_balance
 from .quality import QualityAssessment, QualityObservation, QualityState, assess_quality
-from .capabilities import ModelCandidate, ModelProfile, TaskRequirements, choose_model, profile_from_dict, score_candidate
+from .capabilities import ModelCandidate, ModelProfile, TaskRequirements, choose_model, load_model_profiles, profile_from_dict, score_candidate
 from .benchmarks import BenchmarkObservation, BenchmarkSummary, BenchmarkTask, summarize_observations
 from .model_client import ModelClientError, ModelReply, OpenAICompatibleClient
 from .planning import PlannedTask, plan_task
@@ -75,6 +75,7 @@ __all__ = [
     "ModelProfile",
     "TaskRequirements",
     "choose_model",
+    "load_model_profiles",
     "profile_from_dict",
     "score_candidate",
     "BenchmarkObservation",

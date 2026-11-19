@@ -123,7 +123,10 @@ python -m pytest -q
 python -m mcp_task_runner.cli orchestrate-demo 检查 Windows-MCP 并修复
 python -m mcp_task_runner.cli orchestrate-demo 总结 这段文本
 python -m mcp_task_runner.cli plan-validate examples/plan.json
+python -m mcp_task_runner.cli live-plan "检查 Windows-MCP 并提出修复计划" --providers providers.json
 ```
+
+`live-plan` 会调用真实模型生成计划，但会在任何工具执行前停止，适合作为第一条真实端到端入口。
 
 离线演示会展示：
 

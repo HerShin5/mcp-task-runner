@@ -2,31 +2,27 @@
   "models": [
     {
       "name": "gpt-6.1-terra",
-      "capabilities": {
-        "reasoning": 5,
-        "coding": 5,
-        "tool_calling": 5,
-        "long_context": 4,
-        "vision": 3,
-        "chinese": 4,
-        "structured_output": 5
-      },
+      "capabilities": {"reasoning": 5, "coding": 5, "tool_calling": 5, "long_context": 4, "vision": 3, "chinese": 4, "structured_output": 5},
       "known_limits": [],
       "aliases": ["GPT6.1Terra"]
     },
     {
+      "name": "gpt-6.1-sol",
+      "capabilities": {"reasoning": 4, "coding": 4, "tool_calling": 4, "long_context": 3, "vision": 2, "chinese": 4, "structured_output": 5},
+      "known_limits": [],
+      "aliases": ["GPT6.1Sol"]
+    },
+    {
       "name": "gpt-6-astra",
-      "capabilities": {
-        "reasoning": 3,
-        "coding": 3,
-        "tool_calling": 2,
-        "long_context": 2,
-        "vision": 3,
-        "chinese": 4,
-        "structured_output": 4
-      },
+      "capabilities": {"reasoning": 3, "coding": 3, "tool_calling": 2, "long_context": 2, "vision": 3, "chinese": 4, "structured_output": 4},
       "known_limits": ["not preferred for complex tool orchestration"],
       "aliases": ["GPT6Astra"]
+    },
+    {
+      "name": "example-model",
+      "capabilities": {"reasoning": 2, "coding": 2, "tool_calling": 2, "long_context": 2, "vision": 0, "chinese": 3, "structured_output": 3},
+      "known_limits": [],
+      "aliases": []
     }
   ]
 }
