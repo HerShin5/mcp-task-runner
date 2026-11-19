@@ -60,7 +60,9 @@
 - Fixed an integration contract bug where `RoutedPlan` dropped task requirements; the result now preserves both requirements and selected route.
 - Demo evidence: ops task selected `gpt-terra@gateway-quality`; simple summary selected `gpt-astra@gateway-low`; both made no network requests.
 - Verification: `python -m pytest -q` -> 45 passed.
-- Note: `mcp-task-runner` is not initialized as a Git repository yet; no commit/publish was attempted.
+- GitHub repository created: `https://github.com/HerShin5/mcp-task-runner`.
+- Local Git identity configured for this repository only; private gateway configuration remains ignored.
+- Published `main` at commit `5d253ec` after sanitizing private gateway references; remote branch verified.
 - Next: add real route-model classifier wiring and prepare the first safe end-to-end gateway test.
 - Real low-risk gateway integration completed: router classifier returned structured requirements for Windows-MCP port diagnostics; planner returned a validated read-only `health` plan with `requires_approval=false`. No tools or side effects were executed.
 - Real planner metrics were captured locally for telemetry validation only; private gateway names, domains, model routes, and account data are deliberately excluded from the public repository.

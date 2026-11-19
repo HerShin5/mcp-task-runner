@@ -1,10 +1,13 @@
-# Architecture
+# Architecture / 架构
 
-## Goal
+- [中文项目简介](README.zh-CN.md)
+- [English README](README.md)
+
+## Goal / 目标
 
 Choose a capable model and a usable gateway for a task, execute only validated tool plans, require approval for non-read-only actions, verify outcomes, and retain auditable evidence.
 
-## Runtime flow
+## Runtime flow / 运行流程
 
 ```text
 User goal
@@ -21,7 +24,7 @@ User goal
   -> quality/evidence record
 ```
 
-## Trust boundaries
+## Trust boundaries / 信任边界
 
 - Router-model output is untrusted input. It may suggest task requirements but cannot add capability names or scores outside 0..5.
 - Execution-model output is untrusted input. It must pass `parse_and_validate` before any tool call.
@@ -30,16 +33,16 @@ User goal
 - Tool calls and verification are separate; a successful transport response is not proof that the goal was achieved.
 - Provider/API/group keys are local secrets and must not be committed.
 
-## Gateway selection
+## Gateway selection / 网关选择
 
 Gateways are data-driven. Each gateway can expose any number of models, each with separate pricing metadata. The router first filters for model capability, model availability, provider health, balance/quality status, and circuit state. It then estimates per-request cost from input/output token estimates and short/long pricing, with latency and priority as tie-breakers.
 
 When a long-context pricing threshold is unknown, the router conservatively uses the long band if supplied; it never invents a threshold.
 
-## Quality signal
+## Quality signal / 质量信号
 
 Quality is attached to `(model, gateway)` routes, not just model names. Fixed benchmark tasks compare the same model across gateways and only compare different models where capability requirements permit. Observable failures can deprioritize or circuit-break a route; they do not prove a hidden provider-side model change.
 
-## Platform strategy
+## Platform strategy / 平台策略
 
 The first real adapter is Windows-MCP over Streamable HTTP. The core uses portable Python interfaces; Linux, Debian/Ubuntu, and macOS adapters are future work and are not claimed as tested.

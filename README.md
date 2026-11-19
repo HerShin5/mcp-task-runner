@@ -1,6 +1,10 @@
 # MCP Task Runner
 
-> Internal codename for a safety-first AI automation execution platform.
+> Safety-first AI automation runner with task-aware model routing, MCP execution, approval gates, verification, and audit evidence.
+>
+> **中文文档：** [README.zh-CN.md](README.zh-CN.md)
+
+> **中文简介：** 面向安全执行的 AI 自动化任务运行器，支持任务感知模型路由、MCP 工具、审批闸门、结果验证和审计证据。
 
 MCP Task Runner lets an AI plan work across MCP/API tools while enforcing a hard execution loop:
 
@@ -10,7 +14,7 @@ plan -> classify risk -> request approval -> execute -> verify -> record evidenc
 
 It is not a Dify clone, a drag-and-drop workflow editor, or a standalone MCP server. The project focuses on making tool-using agents safer and more verifiable.
 
-## MVP scenario
+## MVP scenario / MVP 场景
 
 ```text
 "Check whether Windows-MCP is healthy; if it is broken, propose a repair."
@@ -18,7 +22,7 @@ It is not a Dify clone, a drag-and-drop workflow editor, or a standalone MCP ser
 
 The first diagnostic adapter will check process state, port reachability, MCP handshake, and advertised tools. Any non-read-only repair action enters `pending_approval`; the real Feishu adapter will be opt-in, while tests use a local approval adapter.
 
-## Current scope
+## Current scope / 当前范围
 
 - Dependency-free execution core
 - Tool registry with risk metadata
@@ -28,7 +32,7 @@ The first diagnostic adapter will check process state, port reachability, MCP ha
 - Evidence events for plans, approvals, calls, and verification
 - Provider configuration will support manual OpenAI-compatible `base_url` and model fallbacks
 
-## Not in MVP
+## Not in MVP / MVP 暂不包含
 
 - Arbitrary shell execution
 - Automatic changes to production systems
@@ -36,7 +40,7 @@ The first diagnostic adapter will check process state, port reachability, MCP ha
 - A full visual workflow canvas
 - OCR/PDF ingestion and browser automation (planned adapters)
 
-## CLI and local API
+## CLI and local API / CLI 与本地 API
 
 ```powershell
 python -m mcp_task_runner.cli diagnose-plan
@@ -120,7 +124,7 @@ python -c "from mcp_task_runner.api import serve; serve()"
 
 The API is a development adapter only; it has no production authentication yet.
 
-## Development
+## Development / 开发
 
 ```powershell
 python -m pytest -q
