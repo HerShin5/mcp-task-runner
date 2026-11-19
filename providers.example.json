@@ -1,0 +1,23 @@
+{
+  "providers": [
+    {
+      "name": "example-gateway",
+      "base_url": "https://api.example.com/v1",
+      "api_key": "",
+      "group_key": "",
+      "priority": 10,
+      "enabled": true,
+      "timeout": 8,
+      "models": [
+        {
+          "name": "example-model",
+          "pricing": {
+            "short": {"input": 0.02, "output": 0.02},
+            "long": {"input": 0.02, "output": 0.02},
+            "long_context_threshold": null
+          }
+        }
+      ]
+    }
+  ]
+}

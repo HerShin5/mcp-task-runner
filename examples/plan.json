@@ -1,0 +1,13 @@
+{
+  "goal": "Check the local Windows-MCP bridge",
+  "requires_approval": false,
+  "steps": [
+    {
+      "id": "inspect-health",
+      "tool": "health",
+      "arguments": {},
+      "purpose": "Run the read-only health check",
+      "verify": true
+    }
+  ]
+}

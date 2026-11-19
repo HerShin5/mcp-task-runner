@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Local secrets and live gateway configuration
+providers.json
+*.local.json
+.env
+.env.*
+
+# Local evidence and runtime output
+logs/
+evidence/
+*.db
+*.sqlite
+
+# IDE/tool caches
+.vscode/
+.idea/

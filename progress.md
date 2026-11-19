@@ -1,0 +1,67 @@
+# Progress
+
+## 2026-11-19
+- Confirmed project direction with user: independent GitHub work, AI automation/Agent/MCP reliability.
+- Confirmed MVP: Windows-MCP diagnostic scenario, CLI + API-oriented core, simulated MCP + real adapter later.
+- Confirmed safety: every non-read-only action requires approval; Feishu is the real approval channel, with a local default adapter for tests.
+- Confirmed model routing: manual JSON configuration plus startup health checks; support multiple OpenAI-compatible providers later.
+- Created initial planning files.
+- Added `mcp_task_runner/core.py`: tool registry, fail-closed approval gate, verification step, and evidence events.
+- Added three tests covering read-only execution, approval rejection, and failed verification.
+- Verification: `python -m pytest -q` -> 3 passed; `python -m compileall -q mcp_task_runner` -> passed.
+- Added read-only Streamable HTTP MCP client with session handling, JSON/SSE decoding, Bearer auth, discovery, and read-only allowlist enforcement.
+- Added Windows-MCP diagnostic plan for process, port, handshake, and tool-list checks.
+- Fixed one compatibility bug found by tests: fake/simple headers do not expose `get_content_type()`.
+- Verification: `python -m pytest -q` -> 6 passed; `python -m compileall -q mcp_task_runner` -> passed.
+- Real local probe: unauthenticated request correctly returned `401`; authenticated read-only initialize/tools-list succeeded with protocol `2025-06-18`, 13 tools, and a session id. No service or desktop changes were made.
+- Catalog correction: the bridge exposes desktop tools (`snapshot`, `screenshot`, `uia_*`, input/launch tools), not dedicated process/port diagnostic MCP tools. Local process/TCP probes must remain separate read-only adapters; MCP initialize/tools-list are protocol checks.
+- Added provider JSON loader with manual Base URL/model/API key/priority configuration, health probing via `/models`, and first-healthy selection.
+- Added shared approval store/state machine with local test adapter and Feishu card adapter seam. Real Feishu network calls remain disabled until credentials/config are supplied.
+- Verification: `python -m pytest -q` -> 9 passed; `python -m compileall -q mcp_task_runner` -> passed.
+- Added CLI commands: `providers-health`, `mcp-tools`, `diagnose-plan`, and `approval-demo`.
+- Added dependency-free local JSON API with `/health`, `/diagnostic-plan`, and `/approval-demo`.
+- Added CLI/API tests and documented local usage.
+- Verification: `python -m pytest -q` -> 13 passed; `python -m compileall -q mcp_task_runner` -> passed.
+- The rejected approval demo exits non-zero by design when a dangerous action is not approved; tests assert this fail-closed behavior.
+- Added `planner.py` with strict JSON plan parsing and registry-backed validation.
+- Model output cannot invent tools, downgrade risk, skip required verification, or suppress approval for write/destructive actions.
+- Added `plan-validate` CLI command and `examples/plan.json`.
+- Verification: `python -m pytest -q` -> 18 passed; `python -m compileall -q mcp_task_runner` -> passed.
+- Added dynamic `GatewayCatalog`: gateway names live in JSON, arbitrary providers can be added/disabled/reloaded without source changes.
+- Added catalog selection over the existing health + model availability + pricing router.
+- Management-plane data is an optional enrichment layer; generic `/models` probing remains the fallback.
+- Verification: `python -m pytest -q` -> 23 passed.
+- Next: add model-provider invocation behind the validated planner and route decision.
+- Browser research: Loomex/Sub2API exposes enough management data to build a real adapter: dynamic groups, rate multipliers, active status, long-context flag, fallback ids, RPM limit, channel health, TTFT, cache/error rates, RPM/TPM, model usage and actual cost.
+- Remaining gap: explicit current concurrency and a safe non-browser management credential/API path still need confirmation.
+- `/api/v1/auth/me` also exposes balance, frozen balance, account concurrency, status, and balance-notification settings; added a provider-neutral balance alert policy with warning/critical/unknown states.
+- Manual fallback now supports arbitrary gateway names, `group_key`, and multiple model entries with per-model short/long pricing in `providers.example.json`.
+- Long-context threshold is now optional: `null` means unknown; routing uses the long band conservatively when available instead of inventing a boundary.
+- Verification: `python -m pytest -q` -> 28 passed after fixing one syntax typo introduced during the routing edit.
+- Added observable model-quality degradation detector: canary, structured output, tool-call, verification, completion, refusal, latency, and request-error signals; degraded routes are deprioritized and blocked routes can be circuit-broken.
+- Added hand-maintained model capability profiles and task requirements; cheap models are rejected when they fail the capability floor, but can win when they meet it.
+- Added `model_profiles.example.json` and capability-aware selector tests.
+- Added fixed benchmark task/observation/summary contracts for comparing the same model across gateways and models across eligible tasks.
+- Added `benchmarks.example.json` and benchmark summary tests.
+- Verification: `python -m pytest -q` -> 35 passed.
+- Added OpenAI-compatible model client and `plan_task`: model output is captured as raw text, then passed through the trusted registry validator before execution.
+- Added no-secret fake transport tests for model response parsing and planner integration.
+- Verification: `python -m pytest -q` -> 37 passed; `python -m compileall -q mcp_task_runner` -> passed.
+- Added joint model+gateway selector: capability floor filters models first, then provider model availability/health/pricing filters, then cost/quality/latency choose the pair.
+- Verification: `python -m pytest -q` -> 38 passed.
+- Added `orchestrator.py`: classifier -> joint model/gateway selector -> selected OpenAI-compatible client -> trusted plan validator.
+- Added no-secret orchestrator integration test.
+- Verification: `python -m pytest -q` -> 39 passed.
+- Added offline `HeuristicTaskClassifier` and optional `ModelTaskClassifier` that validates router-model JSON output before creating task requirements.
+- Verification: `python -m pytest -q` -> 42 passed.
+- Integrated quality assessments into model+gateway routing: blocked routes are excluded; suspect/degraded routes are penalized; healthy routes compete normally.
+- Verification: `python -m pytest -q` -> 43 passed.
+- Added offline `orchestrate-demo`: task classifier -> model+gateway selector -> simulated model plan -> trusted plan validation.
+- Fixed an integration contract bug where `RoutedPlan` dropped task requirements; the result now preserves both requirements and selected route.
+- Demo evidence: ops task selected `gpt-terra@gateway-quality`; simple summary selected `gpt-astra@gateway-low`; both made no network requests.
+- Verification: `python -m pytest -q` -> 45 passed.
+- Note: `mcp-task-runner` is not initialized as a Git repository yet; no commit/publish was attempted.
+- Next: add real route-model classifier wiring and prepare the first safe end-to-end gateway test.
+- Real low-risk gateway integration completed: router classifier returned structured requirements for Windows-MCP port diagnostics; planner returned a validated read-only `health` plan with `requires_approval=false`. No tools or side effects were executed.
+- Real planner metrics were captured locally for telemetry validation only; private gateway names, domains, model routes, and account data are deliberately excluded from the public repository.
+- Public example provider config was sanitized to generic placeholders before the first commit.

@@ -1,0 +1,29 @@
+{
+  "tasks": [
+    {
+      "id": "structured-health-plan",
+      "category": "tool_planning",
+      "prompt": "Return a JSON plan to inspect a service and verify the result.",
+      "required_capabilities": {
+        "reasoning": 3,
+        "tool_calling": 3,
+        "structured_output": 4
+      },
+      "expected_tool": "health",
+      "requires_structured_output": true,
+      "expected_markers": ["goal", "steps", "verify"]
+    },
+    {
+      "id": "simple-classification",
+      "category": "classification",
+      "prompt": "Classify these short records into the supplied labels.",
+      "required_capabilities": {
+        "reasoning": 1,
+        "chinese": 3,
+        "structured_output": 3
+      },
+      "requires_structured_output": true,
+      "expected_markers": ["label"]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[project]
+name = "mcp-task-runner"
+version = "0.1.0"
+description = "Safety-first AI task execution core for MCP tools"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+mcp-task-runner = "mcp_task_runner.cli:main"
+mcp-task-runner-api = "mcp_task_runner.api:serve"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
