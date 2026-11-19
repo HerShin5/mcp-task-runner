@@ -1,7 +1,7 @@
 # Architecture / 架构
 
-- [中文项目简介](README.zh-CN.md)
-- [English README](README.md)
+- [中文项目简介](README.md)
+- [English README](README.en.md)
 
 ## Goal / 目标
 
