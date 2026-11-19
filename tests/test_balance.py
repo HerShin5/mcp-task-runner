@@ -5,9 +5,9 @@ from mcp_task_runner.balance import BalancePolicy, BalanceSeverity, BalanceSnaps
 
 def test_balance_warning_and_critical_alerts():
     policy = BalancePolicy(warning_threshold=10, critical_threshold=2)
-    assert evaluate_balance(BalanceSnapshot("loomex", 16.6), policy).severity is BalanceSeverity.NORMAL
-    assert evaluate_balance(BalanceSnapshot("loomex", 8), policy).severity is BalanceSeverity.WARNING
-    critical = evaluate_balance(BalanceSnapshot("loomex", 1.5), policy)
+    assert evaluate_balance(BalanceSnapshot("gateway", 16.6), policy).severity is BalanceSeverity.NORMAL
+    assert evaluate_balance(BalanceSnapshot("gateway", 8), policy).severity is BalanceSeverity.WARNING
+    critical = evaluate_balance(BalanceSnapshot("gateway", 1.5), policy)
     assert critical.severity is BalanceSeverity.CRITICAL
     assert critical.should_exclude is True
 

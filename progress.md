@@ -32,7 +32,7 @@
 - Management-plane data is an optional enrichment layer; generic `/models` probing remains the fallback.
 - Verification: `python -m pytest -q` -> 23 passed.
 - Next: add model-provider invocation behind the validated planner and route decision.
-- Browser research: Loomex/Sub2API exposes enough management data to build a real adapter: dynamic groups, rate multipliers, active status, long-context flag, fallback ids, RPM limit, channel health, TTFT, cache/error rates, RPM/TPM, model usage and actual cost.
+- Browser research: a representative management plane exposes enough data to build a real adapter: dynamic groups, rate multipliers, active status, long-context flags, fallback ids, RPM limits, channel health, TTFT, cache/error rates, RPM/TPM, model usage, and actual cost.
 - Remaining gap: explicit current concurrency and a safe non-browser management credential/API path still need confirmation.
 - `/api/v1/auth/me` also exposes balance, frozen balance, account concurrency, status, and balance-notification settings; added a provider-neutral balance alert policy with warning/critical/unknown states.
 - Manual fallback now supports arbitrary gateway names, `group_key`, and multiple model entries with per-model short/long pricing in `providers.example.json`.
