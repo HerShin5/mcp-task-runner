@@ -8,6 +8,7 @@ providers.json
 *.local.json
 .env
 .env.*
+!.env.example
 
 # Local evidence and runtime output
 logs/
