@@ -20,6 +20,7 @@ from .classifier import HeuristicTaskClassifier
 from .model_routing import choose_model_and_gateway
 from .orchestrator import plan_with_route
 from .quality import QualityAssessment
+from .mcp_registry import register_discovered_tools
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -111,6 +112,12 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "mcp-tools":
         discovery = discover_endpoint(_client_from_args(args))
+        registry = ToolRegistry()
+        registered = register_discovered_tools(registry, discovery["tools"])
+        discovery["local_registry"] = [
+            {"name": item.name, "risk": item.risk_level.value, "supports_verify": item.supports_verify}
+            for item in registered
+        ]
         print(json.dumps(discovery, ensure_ascii=False, indent=2))
         return 0
 

@@ -14,6 +14,7 @@ from .model_client import ModelClientError, ModelReply, OpenAICompatibleClient
 from .planning import PlannedTask, plan_task
 from .model_routing import ModelRouteCandidate, ModelRouteDecision, choose_model_and_gateway
 from .orchestrator import RoutedPlan, RoutingDecision, StaticTaskClassifier, TaskClassifier, plan_with_route
+from .mcp_registry import DEFAULT_READ_ONLY_TOOLS, register_discovered_tools
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -95,5 +96,7 @@ __all__ = [
     "StaticTaskClassifier",
     "TaskClassifier",
     "plan_with_route",
+    "DEFAULT_READ_ONLY_TOOLS",
+    "register_discovered_tools",
     "HeuristicTaskClassifier",
 ]
