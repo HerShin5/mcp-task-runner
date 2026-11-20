@@ -42,12 +42,23 @@ def run_read_only_workflow(
     input_tokens: int = 5000,
     output_tokens: int = 1500,
     classifier: TaskClassifier | None = None,
+    model_client: Any | None = None,
+    management: list[Any] | None = None,
 ) -> WindowsWorkflowResult:
-    """Plan and execute only the discovered reviewed read-only MCP tools."""
+    """Plan with a model client, then execute only reviewed read-only MCP tools.
+
+    ``client`` is the Windows-MCP transport. ``model_client`` is deliberately
+    separate so a real model request cannot accidentally be sent to the MCP
+    endpoint. The fallback keeps the original test seam for compatible mocks.
+    """
     client.initialize()
     discovered = client.list_tools()
     registry = ToolRegistry()
     register_discovered_tools(registry, discovered)
+
+    planner_client = model_client or client
+    if not callable(getattr(planner_client, "chat", None)):
+        raise TypeError("model_client must provide chat(); keep it separate from the MCP client")
 
     routed = plan_with_route(
         user_goal=goal,
@@ -57,9 +68,10 @@ def run_read_only_workflow(
         health=health,
         pricing=pricing,
         registry=registry,
-        client_factory=lambda _: client,
+        client_factory=lambda _: planner_client,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        management=management or (),
     )
     execution = execute_read_only_plan(routed.plan.to_dict(), client, registry)
     selected = routed.decision.model_route.selected

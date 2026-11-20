@@ -153,6 +153,19 @@ python -m mcp_task_runner.cli live-plan "检查服务健康并提出只读诊断
 
 管理 Token 只从环境变量读取，命令输出会返回选中的网关、计划和 failover 尝试，不会执行 `click`、`type_text`、`launch` 或任何写操作。先确认模型计划能通过本地校验，再考虑接 Windows-MCP 的只读工具。
 
+Windows-MCP 只读闭环可以直接运行：
+
+```powershell
+python -m mcp_task_runner.cli windows-live-plan `
+  "检查 Windows-MCP 健康状态并汇总只读诊断结果" `
+  --providers sandbox.providers.json `
+  --profiles model_profiles.example.json `
+  --url http://127.0.0.1:8766/mcp `
+  --token-file C:\Users\Administrator\.windows-mcp\mcp-auth-key.txt
+```
+
+它只允许本地审查过的 `snapshot`、`screenshot`、`debug_nodes`，并输出模型 failover、计划和执行结果；`click`、`type_text`、`key`、`launch`、Shell 等工具不会进入执行路径。
+
 离线演示会展示：
 
 - 复杂任务选择能力更强的模型；

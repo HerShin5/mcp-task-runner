@@ -62,11 +62,20 @@ class RoutedPlanClient:
         route_order: list[str],
         *,
         client_factory: Callable[[ProviderConfig], OpenAICompatibleClient] | None = None,
+        model_timeout: float = 30.0,
     ):
+        if model_timeout <= 0:
+            raise ValueError("model timeout must be positive")
         self.router = router
         self.model = model
         self.route_order = route_order
-        self.client_factory = client_factory
+        self.client_factory = client_factory or (lambda provider: OpenAICompatibleClient(
+            base_url=provider.base_url,
+            api_key=provider.api_key,
+            provider=provider.name,
+            model=model,
+            timeout=model_timeout,
+        ))
         self.last_result: RoutedChatResult | None = None
 
     def chat(self, messages: list[dict[str, str]], *, response_format: dict[str, Any] | None = None) -> ModelReply:

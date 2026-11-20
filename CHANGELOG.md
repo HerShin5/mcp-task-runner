@@ -9,6 +9,7 @@
 - Management snapshots now affect ordinary and joint model/gateway routing with fail-closed group/model filtering, multiplier-aware cost, and error-rate penalties.
 - Added a runtime management adapter protocol, generic JSON HTTP adapter, and TTL-backed snapshot store that drops stale data after refresh failures.
 - Routed the health and route-selection CLI commands through `GatewayCatalog`, with one catalog method for consistent joint model/gateway selection.
+- Added the plan-only and read-only Windows-MCP end-to-end CLI workflow, including failover visibility and safe UTF-8 output on legacy Windows consoles.
 
 ## 0.1.0 MVP
 

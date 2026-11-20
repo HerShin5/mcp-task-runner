@@ -29,6 +29,7 @@ from .mcp_registry import register_discovered_tools
 from .gateway_catalog import GatewayCatalog
 from .management import GenericHttpManagementAdapter
 from .routed_client import RoutedModelClient, RoutedPlanClient
+from .windows_workflow import run_read_only_workflow
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,6 +76,18 @@ def build_parser() -> argparse.ArgumentParser:
     live_plan.add_argument("--management-provider", help="provider name for --management-url")
     live_plan.add_argument("--management-token-env", default="MCP_TASK_RUNNER_MANAGEMENT_TOKEN")
     live_plan.add_argument("--management-max-age", type=float, default=300.0)
+    live_plan.add_argument("--model-timeout", type=float, default=30.0)
+
+    windows_live = sub.add_parser("windows-live-plan", help="generate and execute a validated read-only Windows-MCP plan")
+    windows_live.add_argument("goal", nargs="+")
+    windows_live.add_argument("--providers", default="sandbox.providers.json")
+    windows_live.add_argument("--profiles", default="model_profiles.example.json")
+    windows_live.add_argument("--url", default="http://127.0.0.1:8766/mcp")
+    windows_live.add_argument("--token-file", type=Path, default=Path(r"C:\Users\Administrator\.windows-mcp\mcp-auth-key.txt"))
+    windows_live.add_argument("--timeout", type=float, default=10.0)
+    windows_live.add_argument("--input-tokens", type=int, default=5000)
+    windows_live.add_argument("--output-tokens", type=int, default=1500)
+    windows_live.add_argument("--model-timeout", type=float, default=30.0)
 
     return parser
 
@@ -90,7 +103,15 @@ def _client_from_args(args: argparse.Namespace) -> StreamableHttpMcpClient:
     return StreamableHttpMcpClient(McpEndpoint(args.url, timeout=args.timeout, bearer_token=token))
 
 
+def _configure_stdout() -> None:
+    """Keep JSON reports printable on legacy Windows consoles."""
+    reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="backslashreplace")
+
+
 def run(argv: Sequence[str] | None = None) -> int:
+    _configure_stdout()
     args = build_parser().parse_args(argv)
 
     if args.command == "providers-health":
@@ -276,7 +297,12 @@ def run(argv: Sequence[str] | None = None) -> int:
             for item in decision.candidates
             if item.model.name == selected.model.name
         ]
-        client = RoutedPlanClient(RoutedModelClient(providers), selected.model.name, route_order)
+        client = RoutedPlanClient(
+            RoutedModelClient(providers),
+            selected.model.name,
+            route_order,
+            model_timeout=args.model_timeout,
+        )
         try:
             result = plan_with_route(
                 user_goal=goal,
@@ -310,6 +336,74 @@ def run(argv: Sequence[str] | None = None) -> int:
             },
         }, ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "windows-live-plan":
+        goal = " ".join(args.goal)
+        catalog = GatewayCatalog(args.providers)
+        snapshots = catalog.health()
+        profiles = load_model_profiles(args.profiles)
+        health = [item.health for item in snapshots]
+        management = [item.management for item in snapshots if item.management is not None]
+        requirements = HeuristicTaskClassifier().classify(goal)
+        decision = catalog.select_model_and_gateway(
+            profiles,
+            requirements,
+            input_tokens=args.input_tokens,
+            output_tokens=args.output_tokens,
+            snapshots=snapshots,
+        )
+        if decision.selected is None:
+            print(json.dumps({"error": "no capable healthy model/gateway route"}, ensure_ascii=False))
+            return 2
+        selected = decision.selected
+        route_order = [
+            item.provider.name
+            for item in decision.candidates
+            if item.model.name == selected.model.name
+        ]
+        model_client = RoutedPlanClient(
+            RoutedModelClient(catalog.providers),
+            selected.model.name,
+            route_order,
+            model_timeout=args.model_timeout,
+        )
+        mcp_client = _client_from_args(args)
+        try:
+            result = run_read_only_workflow(
+                goal=goal,
+                client=mcp_client,
+                model_client=model_client,
+                profiles=profiles,
+                providers=catalog.providers,
+                health=health,
+                pricing=catalog.pricing,
+                input_tokens=args.input_tokens,
+                output_tokens=args.output_tokens,
+                management=management,
+            )
+        except (ModelClientError, PlanValidationError, OSError, RuntimeError, TypeError) as exc:
+            print(json.dumps({"error": "windows_read_only_workflow_failed", "detail": str(exc)}, ensure_ascii=False))
+            return 2
+        last_result = model_client.last_result
+        print(json.dumps({
+            "selected_model": result.selected_model,
+            "selected_gateway": result.selected_provider,
+            "usage": result.usage,
+            "latency_ms": result.latency_ms,
+            "plan": result.plan,
+            "execution": {
+                "status": result.execution.status,
+                "blocked_steps": list(result.execution.blocked_steps),
+                "results": [item.__dict__ for item in result.execution.results],
+            },
+            "failover": {
+                "attempts": list(last_result.attempts) if last_result else [],
+                "route": last_result.route if last_result else None,
+                "errors": list(last_result.errors) if last_result else [],
+            },
+            "safety": {"read_only": True, "write_tools_enabled": False},
+        }, ensure_ascii=False, indent=2))
+        return 0 if result.execution.status in {"executed", "degraded"} else 2
 
     return 2
 

@@ -99,9 +99,10 @@ class GatewayCatalog:
         input_tokens: int,
         output_tokens: int,
         quality: Iterable[QualityAssessment] = (),
+        snapshots: Iterable[GatewaySnapshot] | None = None,
     ) -> ModelRouteDecision:
         """Select a capable model using one consistent catalog snapshot."""
-        snapshots = self.health()
+        snapshots = list(snapshots) if snapshots is not None else self.health()
         return choose_model_and_gateway(
             profiles,
             self.providers,

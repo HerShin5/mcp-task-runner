@@ -168,6 +168,19 @@ python -m mcp_task_runner.cli live-plan "check service health and propose a read
 ```
 
 The management token is read only from the environment. Output includes the selected gateway, validated plan, and failover attempts; no `click`, `type_text`, `launch`, or other write tool is executed.
+
+Run the Windows-MCP read-only loop with:
+
+```powershell
+python -m mcp_task_runner.cli windows-live-plan `
+  "check Windows-MCP health and summarize read-only diagnostics" `
+  --providers sandbox.providers.json `
+  --profiles model_profiles.example.json `
+  --url http://127.0.0.1:8766/mcp `
+  --token-file C:\Users\Administrator\.windows-mcp\mcp-auth-key.txt
+```
+
+Only the locally reviewed `snapshot`, `screenshot`, and `debug_nodes` tools can execute. The command reports model failover, the validated plan, and execution results; `click`, `type_text`, `key`, `launch`, and shell tools never enter the execution path.
 - no network or system side effect is performed.
 
 ## Configure your own gateways
