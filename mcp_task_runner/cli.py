@@ -16,7 +16,7 @@ from .model_client import ModelClientError, ModelReply, OpenAICompatibleClient
 from .routing import PricingBand, RouteObjective, RoutePricing, load_route_pricing, select_route
 from .windows_diagnostics import build_read_only_plan, discover_endpoint
 from .windows_report import collect_read_only_report
-from .health_report import normalize_health_report
+from .health_report import normalize_health_report, render_human_report
 from .capabilities import ModelProfile, load_model_profiles
 from .classifier import HeuristicTaskClassifier
 from .model_routing import choose_model_and_gateway
@@ -43,6 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     report = sub.add_parser("windows-report", help="run reviewed read-only Windows-MCP checks")
     _add_endpoint_options(report)
+    report.add_argument("--format", choices=["json", "text"], default="json")
 
     plan = sub.add_parser("diagnose-plan", help="print the read-only Windows-MCP diagnostic plan")
     plan.add_argument("--url", default="http://127.0.0.1:8766/mcp")
@@ -128,7 +129,11 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "windows-report":
         raw_report = collect_read_only_report(_client_from_args(args))
-        print(json.dumps(normalize_health_report(raw_report), ensure_ascii=False, indent=2))
+        report = normalize_health_report(raw_report)
+        if args.format == "text":
+            print(render_human_report(report))
+        else:
+            print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "diagnose-plan":
