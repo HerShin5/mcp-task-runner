@@ -25,6 +25,7 @@ from .approval_demo import run_local_approval_demo
 from .persistence import SQLiteApprovalStore
 from .plan_executor import PlanExecutionResult, execute_read_only_plan
 from .windows_workflow import WindowsWorkflowResult, run_read_only_workflow
+from .failover import CircuitBreaker, CircuitState, FailoverResult, execute_with_failover, is_retryable_error
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -126,5 +127,10 @@ __all__ = [
     "execute_read_only_plan",
     "WindowsWorkflowResult",
     "run_read_only_workflow",
+    "CircuitBreaker",
+    "CircuitState",
+    "FailoverResult",
+    "execute_with_failover",
+    "is_retryable_error",
     "HeuristicTaskClassifier",
 ]
