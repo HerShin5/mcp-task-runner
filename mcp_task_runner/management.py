@@ -37,7 +37,7 @@ class GroupSnapshot:
 
 
 @dataclass(frozen=True)
-class BalanceSnapshot:
+class AccountSnapshot:
     balance: float | None
     frozen_balance: float | None = None
     concurrency: int | None = None
@@ -48,7 +48,7 @@ class BalanceSnapshot:
 class ManagementSnapshot:
     provider: str
     groups: tuple[GroupSnapshot, ...]
-    balance: BalanceSnapshot | None = None
+    balance: AccountSnapshot | None = None
     observed_at: str | None = None
 
 
@@ -68,7 +68,9 @@ def _integer(value: Any) -> int | None:
 
 def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> ManagementSnapshot:
     """Normalize a redacted/generic payload with groups and optional account."""
-    raw_groups = payload.get("groups", payload.get("data", {}).get("groups", []))
+    nested = payload.get("data")
+    nested = nested if isinstance(nested, dict) else {}
+    raw_groups = payload.get("groups", nested.get("groups", []))
     if not isinstance(raw_groups, list):
         raw_groups = []
     groups: list[GroupSnapshot] = []
@@ -102,10 +104,10 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
             cache_rate=_number(raw.get("cache_rate")),
         ))
 
-    account = payload.get("account", payload.get("data", {}).get("account", {}))
+    account = payload.get("account", nested.get("account", {}))
     balance = None
     if isinstance(account, dict) and any(key in account for key in ("balance", "frozen_balance", "concurrency", "status")):
-        balance = BalanceSnapshot(
+        balance = AccountSnapshot(
             _number(account.get("balance")),
             _number(account.get("frozen_balance")),
             _integer(account.get("concurrency")),
@@ -114,5 +116,7 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
     return ManagementSnapshot(provider, tuple(groups), balance, payload.get("observed_at"))
 
 
-def load_snapshot_fixture(path: str | Path, *, provider: str = "fixture") -> ManagementSnapshot:
-    return snapshot_from_generic_payload(provider, json.loads(Path(path).read_text(encoding="utf-8")))
+def load_snapshot_fixture(path: str | Path, *, provider: str | None = None) -> ManagementSnapshot:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    inferred_provider = payload.get("provider") if isinstance(payload, dict) else None
+    return snapshot_from_generic_payload(provider or str(inferred_provider or "fixture"), payload)

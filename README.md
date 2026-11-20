@@ -166,6 +166,8 @@ python -m mcp_task_runner.cli live-plan "检查 Windows-MCP 并提出修复计�
 
 API Key、group key、管理 Token 和 Cookie 只能放在本机配置或密钥存储中。控制 API 支持 `MCP_TASK_RUNNER_API_TOKEN` Bearer 鉴权；审批状态支持 SQLite 持久化。
 
+网关管理面可以通过脱敏快照接入。若配置文件是 `providers.json`，本地开发时可放置同目录的 `providers.management.json`；快照只保存分组、模型、倍率、健康、余额和并发等元数据，不保存 Token。示例见 `examples/management-snapshot.example.json`。真实后台适配器应在授权的管理 API 边界内更新同一快照结构，读取失败不能绕过普通网关健康检查。
+
 ## CLI 与本地 API
 
 ```powershell

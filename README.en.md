@@ -179,6 +179,8 @@ Copy `providers.example.json` to a local `providers.json` and fill in your own v
 
 The project does not require a specific model vendor. Users can configure OpenAI-compatible gateways and add their own models, providers, group keys, pricing, and model capability profiles. The control API supports `MCP_TASK_RUNNER_API_TOKEN` Bearer authentication and approval state can be persisted in SQLite.
 
+Management-plane data can be attached through a redacted snapshot. For local development, a `providers.management.json` file next to `providers.json` can describe groups, models, pricing multipliers, health, balance, and concurrency without storing tokens. See `examples/management-snapshot.example.json`. A production adapter should update the same snapshot shape only through an authorized management API; management failures must not bypass ordinary gateway health checks.
+
 ## CLI and local API
 
 ```powershell

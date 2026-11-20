@@ -5,6 +5,7 @@
 - Chinese-first repository landing page with an English README available at `README.en.md`.
 - Clarified that model, gateway, API key, Base URL, group key, and management credentials are user-provided configuration.
 - Added CI, MIT license, architecture, security, and contribution documentation.
+- Added a provider-neutral management snapshot seam and optional catalog fixture loading.
 
 ## 0.1.0 MVP
 

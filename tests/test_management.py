@@ -1,4 +1,7 @@
-from mcp_task_runner.management import snapshot_from_generic_payload
+import json
+
+from mcp_task_runner import BalanceSnapshot
+from mcp_task_runner.management import AccountSnapshot, load_snapshot_fixture, snapshot_from_generic_payload
 
 
 def test_management_payload_normalizes_groups_models_health_and_balance():
@@ -22,3 +25,16 @@ def test_management_payload_normalizes_groups_models_health_and_balance():
     assert snapshot.groups[0].models[0].name == "model"
     assert snapshot.groups[0].ttft_ms == 1200
     assert snapshot.balance.concurrency == 10
+
+
+def test_management_account_snapshot_does_not_replace_balance_alert_snapshot():
+    assert BalanceSnapshot("gateway", 1.0).balance == 1.0
+    assert AccountSnapshot(1.0, concurrency=2).concurrency == 2
+
+
+def test_fixture_loader_infers_provider_and_tolerates_non_object_data(tmp_path):
+    fixture = tmp_path / "management.json"
+    fixture.write_text(json.dumps({"provider": "gateway", "data": []}), encoding="utf-8")
+    snapshot = load_snapshot_fixture(fixture)
+    assert snapshot.provider == "gateway"
+    assert snapshot.groups == ()
