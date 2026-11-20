@@ -214,6 +214,8 @@ Failover 只适用于“尚未产生输出、尚未产生外部副作用”的�
 
 ## CLI 与本地 API
 
+若管理面负责决定某个网关能否使用，请在该网关的 `providers` 配置项中设置 `"management_policy": "required"`。只有新鲜快照包含启用且可用的目标分组和模型时，网关才参与选路；快照缺失、过期或过期后刷新失败都会排除它，直到取得允许该模型的新快照。可用 `management_max_age_seconds` 设置最大快照年龄（默认 300 秒）。默认策略 `advisory` 适用于只把管理数据用于参考的网关：没有快照时，仍可依据已确认的模型和本地价格选路。
+
 ```powershell
 python -m mcp_task_runner.cli providers-health --config providers.json
 python -m mcp_task_runner.cli route-select --config providers.json --input-tokens 120000 --output-tokens 8000

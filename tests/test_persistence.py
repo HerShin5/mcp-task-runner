@@ -43,3 +43,27 @@ def test_api_demo_uses_independent_approval_records():
     assert first != second
     assert state.approvals.get(first).status is ApprovalStatus.REJECTED
     assert state.approvals.get(second).status is ApprovalStatus.PENDING
+
+
+def test_concurrent_sqlite_callbacks_only_record_one_decision(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from mcp_task_runner.approval_callbacks import ApprovalCallbackHandler
+
+    path = tmp_path / 'race.sqlite'
+    stores = [SQLiteApprovalStore(path), SQLiteApprovalStore(path)]
+    stores[0].create('one', ToolSpec('demo', 'demo', RiskLevel.WRITE), {})
+    start = Barrier(2)
+
+    def callback(index):
+        action = ('reject', 'approve')[index]
+        start.wait(timeout=5)
+        return ApprovalCallbackHandler(stores[index]).handle({'task_id': 'one', 'action': action}, approver=action)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(callback, range(2)))
+    winner, = [r for r in results if r.accepted]
+    record = SQLiteApprovalStore(path).get('one')
+    assert all(r.status == record.status.value for r in results)
+    assert record.approver == ('reject', 'approve')[results.index(winner)]
+    assert record.reason == f'callback action: {record.approver}'

@@ -250,6 +250,8 @@ python -c "from mcp_task_runner.api import serve; serve()"
 
 ## Security boundary
 
+Set `"management_policy": "required"` on an individual provider when its management plane decides eligibility. A missing or expired snapshot does not authorize a route: a fresh snapshot must include a usable group and model. `management_max_age_seconds` defaults to 300. The default `advisory` policy allows fallback to confirmed model availability and local pricing if no snapshot is available.
+
 - Arbitrary shell execution is not enabled.
 - Non-read-only tools fail closed and require approval.
 - Model output cannot bypass the registry or risk validator.

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from .capabilities import ModelProfile, TaskRequirements
-from .management import ManagementRoute, ManagementSnapshot, resolve_management_route
+from .management import ManagementRoute, ManagementSnapshot, management_eligibility
 from .providers import ProviderConfig, ProviderHealth
 from .quality import QualityAssessment, QualityState
 from .routing import PricingBand, RoutePricing
@@ -52,6 +52,8 @@ def choose_model_and_gateway(
     profile_map = {profile.name: profile for profile in profiles}
     providers_by_model: dict[str, list[ProviderConfig]] = {}
     for provider in providers:
+        if not provider.enabled:
+            continue
         for model_name in dict.fromkeys((provider.model, *provider.models)):
             if model_name:
                 providers_by_model.setdefault(model_name, []).append(provider)
@@ -67,13 +69,7 @@ def choose_model_and_gateway(
             continue
         for provider in providers_by_model.get(model_name, []):
             status = health_map.get(provider.name)
-            if status is None or not status.reachable:
-                continue
-            # Health probe may have checked a provider's default model while
-            # the requested model is another member of that provider's list.
-            if status.available_models and model_name not in status.available_models:
-                continue
-            if not status.available_models and status.model_available is False and model_name == provider.model:
+            if status is None or not status.confirms_model(model_name):
                 continue
             route_name = f"{model_name}@{provider.name}"
             assessment = quality_map.get(route_name)
@@ -82,9 +78,8 @@ def choose_model_and_gateway(
             route_pricing = pricing_map.get((provider.name, model_name))
             if route_pricing is None:
                 continue
-            management_route = resolve_management_route(management_map.get(provider.name), model_name)
-            snapshot = management_map.get(provider.name)
-            if snapshot is not None and snapshot.groups and management_route is None:
+            eligible, management_route = management_eligibility(provider, model_name, management_map.get(provider.name))
+            if not eligible:
                 continue
             estimated_cost = route_pricing.estimate(input_tokens, output_tokens)
             if management_route is not None:

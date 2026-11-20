@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+from math import isfinite
 from dataclasses import dataclass
 from time import perf_counter
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+from .config_flags import enabled
 
 
 @dataclass(frozen=True)
@@ -22,6 +25,14 @@ class ProviderConfig:
     priority: int = 100
     enabled: bool = True
     timeout: float = 8.0
+    management_policy: str = "advisory"
+    management_max_age_seconds: float = 300.0
+
+    def __post_init__(self) -> None:
+        if self.management_policy not in ("advisory", "required"):
+            raise ValueError("management_policy must be advisory or required")
+        if not isfinite(self.management_max_age_seconds) or self.management_max_age_seconds < 0:
+            raise ValueError("management_max_age_seconds must be finite and nonnegative")
 
     def supports_model(self, model: str) -> bool:
         return model == self.model or model in self.models
@@ -40,7 +51,14 @@ class ProviderHealth:
     model: str
     model_available: bool | None = None
     latency_ms: float | None = None
-    available_models: tuple[str, ...] = ()
+    available_models: tuple[str, ...] | None = None
+
+    def confirms_model(self, name: str) -> bool:
+        if not self.reachable:
+            return False
+        if self.available_models is not None:
+            return name in self.available_models
+        return self.model == name and self.model_available is True
 
 
 def load_provider_configs(path: str | Path) -> list[ProviderConfig]:
@@ -65,8 +83,10 @@ def load_provider_configs(path: str | Path) -> list[ProviderConfig]:
                     for item in raw.get("models", [])
                 ),
                 priority=int(raw.get("priority", 100)),
-                enabled=bool(raw.get("enabled", True)),
+                enabled=enabled(raw.get("enabled", True)),
                 timeout=float(raw.get("timeout", 8.0)),
+                management_policy=raw.get("management_policy", "advisory"),
+                management_max_age_seconds=float(raw.get("management_max_age_seconds", 300.0)),
             )
         )
     return sorted((provider for provider in result if provider.enabled), key=lambda item: item.priority)
@@ -92,7 +112,8 @@ def check_provider(provider: ProviderConfig) -> ProviderHealth:
                     detail = "models endpoint reachable; model availability unknown"
                 else:
                     detail = "models endpoint reachable" if model_available else "model not reported by endpoint"
-                return ProviderHealth(provider.name, True, status, detail, provider.model, model_available, latency_ms, tuple(available_models or ()))
+                inventory = tuple(sorted(available_models)) if available_models is not None else None
+                return ProviderHealth(provider.name, True, status, detail, provider.model, model_available, latency_ms, inventory)
             return ProviderHealth(provider.name, False, status, "models endpoint returned a non-success status", provider.model, False, latency_ms)
     except HTTPError as exc:
         # A 401/403 proves the endpoint is reachable but credentials are invalid.
@@ -109,13 +130,13 @@ def _model_ids(response: Any) -> set[str] | None:
     data = payload.get("data") if isinstance(payload, dict) else None
     if not isinstance(data, list):
         return None
-    return {item.get("id") for item in data if isinstance(item, dict) and item.get("id")}
+    return {item["id"] for item in data if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"]}
 
 
 def choose_first_healthy(providers: list[ProviderConfig], health: list[ProviderHealth]) -> ProviderConfig | None:
     by_name = {item.name: item for item in health}
     for provider in sorted(providers, key=lambda item: item.priority):
         status = by_name.get(provider.name)
-        if provider.enabled and status and status.reachable and status.model == provider.model and status.model_available is True:
+        if provider.enabled and status and status.confirms_model(provider.model):
             return provider
     return None

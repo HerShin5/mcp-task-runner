@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .approvals import ApprovalRequest, ApprovalStatus, ApprovalStore
+from .approvals import AlreadyDecided, ApprovalRequest, ApprovalStore
 
 
 @dataclass(frozen=True)
@@ -36,17 +36,12 @@ class ApprovalCallbackHandler:
         if self.allowed_approvers is not None and approver not in self.allowed_approvers:
             return CallbackResult(False, task_id, "forbidden", "approver is not allowed")
         try:
-            request = self.store.get(task_id)
+            updated = self.store.decide(task_id, approved=action == "approve", approver=approver,
+                                        reason=f"callback action: {action}")
         except KeyError:
             return CallbackResult(False, task_id, "not_found", "approval request not found")
-        if request.status is not ApprovalStatus.PENDING:
-            return CallbackResult(False, task_id, request.status.value, "approval is already decided")
-        updated = self.store.decide(
-            task_id,
-            approved=action == "approve",
-            approver=approver,
-            reason=f"callback action: {action}",
-        )
+        except AlreadyDecided:
+            return CallbackResult(False, task_id, self.store.get(task_id).status.value, "approval is already decided")
         return CallbackResult(True, task_id, updated.status.value, "approval recorded")
 
 

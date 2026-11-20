@@ -25,7 +25,7 @@ from .classifier import HeuristicTaskClassifier
 from .orchestrator import RoutingDecision, plan_from_decision, plan_with_route
 from .mcp_registry import register_discovered_tools
 from .gateway_catalog import GatewayCatalog
-from .management import GenericHttpManagementAdapter
+from .management import GenericHttpManagementAdapter, management_eligibility
 from .routed_client import RoutedModelClient, RoutedPlanClient
 from .windows_workflow import run_read_only_workflow
 
@@ -116,7 +116,9 @@ def run(argv: Sequence[str] | None = None) -> int:
         catalog = GatewayCatalog(args.config)
         snapshots = catalog.health()
         health = [item.health for item in snapshots]
-        selected = choose_first_healthy(catalog.providers, health)
+        management = {item.name: item.management for item in snapshots}
+        eligible = [p for p in catalog.providers if management_eligibility(p, p.model, management.get(p.name))[0]]
+        selected = choose_first_healthy(eligible, health)
         print(json.dumps({"providers": [item.__dict__ for item in health], "selected": selected.name if selected else None}, indent=2))
         return 0 if selected else 1
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from math import inf
 from typing import Iterable
 
-from .management import ManagementRoute, ManagementSnapshot, resolve_management_route
+from .management import ManagementRoute, ManagementSnapshot, management_eligibility
 from .providers import ProviderConfig, ProviderHealth
 
 
@@ -106,16 +106,13 @@ def select_route(
 
     for name, provider in provider_map.items():
         status = health_map.get(name)
-        if status is None or not status.reachable:
-            continue
-        if status.model_available is False:
+        if status is None or not status.confirms_model(provider.model):
             continue
         route_pricing = pricing_map.get((name, provider.model))
         if route_pricing is None:
             continue
-        management_route = resolve_management_route(management_map.get(name), provider.model)
-        snapshot = management_map.get(name)
-        if snapshot is not None and snapshot.groups and management_route is None:
+        eligible, management_route = management_eligibility(provider, provider.model, management_map.get(name))
+        if not eligible:
             continue
         estimated_cost = route_pricing.estimate(
             input_tokens,

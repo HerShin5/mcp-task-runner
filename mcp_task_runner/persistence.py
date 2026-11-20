@@ -9,7 +9,7 @@ from pathlib import Path
 from threading import Lock
 from time import time
 
-from .approvals import ApprovalRequest, ApprovalStatus
+from .approvals import AlreadyDecided, ApprovalRequest, ApprovalStatus
 from .core import RiskLevel, ToolSpec
 
 
@@ -71,14 +71,15 @@ class SQLiteApprovalStore:
 
     def decide(self, task_id, *, approved, approver, reason=""):
         with self._lock, self._connect() as db:
-            row = db.execute("SELECT status FROM approvals WHERE task_id = ?", (task_id,)).fetchone()
-            if row is None:
-                raise KeyError(task_id)
-            if row["status"] != ApprovalStatus.PENDING.value:
-                raise ValueError(f"approval is already {row['status']}")
             status = ApprovalStatus.APPROVED.value if approved else ApprovalStatus.REJECTED.value
-            db.execute(
-                "UPDATE approvals SET status = ?, approver = ?, reason = ?, decided_at = ? WHERE task_id = ?",
-                (status, approver, reason, time(), task_id),
+            updated = db.execute(
+                "UPDATE approvals SET status = ?, approver = ?, reason = ?, decided_at = ? "
+                "WHERE task_id = ? AND status = ?",
+                (status, approver, reason, time(), task_id, ApprovalStatus.PENDING.value),
             )
+            if updated.rowcount != 1:
+                row = db.execute("SELECT status FROM approvals WHERE task_id = ?", (task_id,)).fetchone()
+                if row is None:
+                    raise KeyError(task_id)
+                raise AlreadyDecided(f"approval is already {row['status']}")
         return self.get(task_id)

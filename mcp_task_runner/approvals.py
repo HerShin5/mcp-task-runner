@@ -11,6 +11,10 @@ from typing import Any
 from .core import ApprovalDecision, ApprovalGateway, ToolSpec
 
 
+class AlreadyDecided(ValueError):
+    """A concurrent or repeated decision lost the pending-state transition."""
+
+
 class ApprovalStatus(str, Enum):
     PENDING = "pending_approval"
     APPROVED = "approved"
@@ -52,7 +56,7 @@ class ApprovalStore:
         with self._lock:
             request = self._requests[task_id]
             if request.status is not ApprovalStatus.PENDING:
-                raise ValueError(f"approval is already {request.status.value}")
+                raise AlreadyDecided(f"approval is already {request.status.value}")
             request.status = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
             request.approver = approver
             request.reason = reason

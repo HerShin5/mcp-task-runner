@@ -15,6 +15,9 @@ from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .config_flags import enabled
+from .providers import ProviderConfig
+
 
 @dataclass(frozen=True)
 class ModelSnapshot:
@@ -56,7 +59,7 @@ class ManagementSnapshot:
     observed_at: str | None = None
 
     def observed_epoch(self) -> float | None:
-        if not self.observed_at:
+        if not isinstance(self.observed_at, str) or not self.observed_at:
             return None
         try:
             value = self.observed_at.replace("Z", "+00:00")
@@ -202,11 +205,6 @@ _BLOCKED_STATES = frozenset({
 })
 
 
-def _enabled(value: Any) -> bool:
-    """Only explicit true values enable a group or model."""
-    return value is True or (isinstance(value, str) and value.strip().lower() == "true")
-
-
 def _number(value: Any) -> float | None:
     try:
         return float(value) if value is not None else None
@@ -244,6 +242,16 @@ def resolve_management_route(snapshot: ManagementSnapshot | None, model_name: st
     return min(matches, key=lambda item: (item.rate_multiplier, item.group.id)) if matches else None
 
 
+def management_eligibility(provider: ProviderConfig, model: str, snapshot: ManagementSnapshot | None) -> tuple[bool, ManagementRoute | None]:
+    required = provider.management_policy == "required"
+    if required and (snapshot is None or not snapshot.is_fresh(provider.management_max_age_seconds)):
+        return False, None
+    if snapshot is None or not snapshot.groups:
+        return not required, None
+    route = resolve_management_route(snapshot, model)
+    return route is not None, route
+
+
 def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> ManagementSnapshot:
     """Normalize a redacted/generic payload with groups and optional account."""
     nested = payload.get("data")
@@ -263,7 +271,7 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
             elif isinstance(model, dict) and model.get("name"):
                 models.append(ModelSnapshot(
                     str(model["name"]),
-                    _enabled(model.get("enabled", True)),
+                    enabled(model.get("enabled", True)),
                     _number(model.get("rate_multiplier")),
                     model.get("long_context_pricing_enabled"),
                 ))
@@ -271,7 +279,7 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
             id=str(raw.get("id", raw.get("group_id", raw.get("name", "unknown")))),
             name=str(raw.get("name", "unnamed")),
             platform=raw.get("platform"),
-            enabled=_enabled(raw.get("enabled", raw.get("status", "active") == "active")),
+            enabled=enabled(raw.get("enabled", raw.get("status", "active") == "active")),
             rate_multiplier=_number(raw.get("rate_multiplier")),
             models=tuple(models),
             rpm_limit=_integer(raw.get("rpm_limit")),

@@ -36,8 +36,8 @@ class RoutedModelClient:
         response_started: bool = False,
         external_side_effect: bool = False,
     ) -> RoutedChatResult:
-        candidates = route_order if route_order is not None else [provider.name for provider in self.providers if provider.supports_model(model)]
-        by_name = {provider.name: provider for provider in self.providers}
+        by_name = {p.name: p for p in self.providers if p.enabled and p.supports_model(model)}
+        candidates = list(by_name) if route_order is None else [name for name in route_order if name in by_name]
         factory = client_factory or (lambda provider: OpenAICompatibleClient(
             base_url=provider.base_url,
             api_key=provider.api_key,
