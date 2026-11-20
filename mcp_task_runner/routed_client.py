@@ -33,6 +33,8 @@ class RoutedModelClient:
         response_format: dict[str, Any] | None = None,
         route_order: list[str] | None = None,
         client_factory: Callable[[ProviderConfig], OpenAICompatibleClient] | None = None,
+        response_started: bool = False,
+        external_side_effect: bool = False,
     ) -> RoutedChatResult:
         candidates = route_order or [provider.name for provider in self.providers if provider.supports_model(model)]
         by_name = {provider.name: provider for provider in self.providers}
@@ -48,7 +50,13 @@ class RoutedModelClient:
             provider = by_name[route]
             return factory(provider).chat(messages, response_format=response_format)
 
-        result: FailoverResult[ModelReply] = execute_with_failover(candidates, call, self.breaker)
+        result: FailoverResult[ModelReply] = execute_with_failover(
+            candidates,
+            call,
+            self.breaker,
+            response_started=response_started,
+            external_side_effect=external_side_effect,
+        )
         return RoutedChatResult(result.value, result.route, result.attempts, result.errors)
 
 

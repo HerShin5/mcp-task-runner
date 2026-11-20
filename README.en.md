@@ -214,6 +214,8 @@ The project does not require a specific model vendor. Users can configure OpenAI
 
 Management-plane data can be attached through a redacted snapshot. For local development, a `providers.management.json` file next to `providers.json` can describe groups, models, pricing multipliers, health, balance, and concurrency without storing tokens. See `examples/management-snapshot.example.json`. A production adapter should update the same snapshot shape only through an authorized management API; management failures must not bypass ordinary gateway health checks.
 
+Failover is only valid before output has started and before an external side effect may have happened. If a stream has emitted data or the caller marks the action as potentially mutating an external system, timeouts, 429s, and 5xx errors are recorded without replaying the request on another gateway.
+
 When attached to routing, disabled, blocked, offline, or model-missing groups are excluded; group/model multipliers affect estimated cost and reported error rates add a reliability penalty. Without a management snapshot, the existing health probe and manual pricing configuration remain the source of truth, so a temporary management-plane outage does not silently authorize a route.
 
 Runtime adapters use `ManagementSnapshotStore` for refresh and TTL handling: an expired snapshot or failed refresh is removed from routing instead of reusing old balance or health data. `GenericHttpManagementAdapter` only reads JSON and keeps the normalized snapshot in memory; it does not write management tokens to config, logs, or fixture files. Provider-specific field mapping belongs in a separate adapter.

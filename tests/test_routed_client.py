@@ -63,3 +63,28 @@ def test_routed_plan_client_exposes_model_client_shape_and_attempts():
     assert reply.text == '{"goal":"check"}'
     assert client.last_result.route == "good"
     assert client.last_result.attempts == ("good",)
+
+
+def test_routed_model_client_forwards_side_effect_safety_boundary():
+    providers = [
+        ProviderConfig("first", "https://first/v1", "model"),
+        ProviderConfig("second", "https://second/v1", "model"),
+    ]
+    calls = []
+
+    def factory(provider):
+        class Fake:
+            def chat(self, messages, *, response_format=None):
+                calls.append(provider.name)
+                raise ModelClientError("request timeout after side effect")
+        return Fake()
+
+    result = RoutedModelClient(providers).chat(
+        [{"role": "user", "content": "do it"}],
+        model="model",
+        client_factory=factory,
+        external_side_effect=True,
+    )
+    assert result.reply is None
+    assert result.attempts == ("first",)
+    assert calls == ["first"]

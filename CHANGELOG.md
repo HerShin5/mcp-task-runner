@@ -10,6 +10,7 @@
 - Added a runtime management adapter protocol, generic JSON HTTP adapter, and TTL-backed snapshot store that drops stale data after refresh failures.
 - Routed the health and route-selection CLI commands through `GatewayCatalog`, with one catalog method for consistent joint model/gateway selection.
 - Added the plan-only and read-only Windows-MCP end-to-end CLI workflow, including failover visibility and safe UTF-8 output on legacy Windows consoles.
+- Added explicit failover guards for started streams and possible external side effects, with regression tests preventing unsafe replay.
 
 ## 0.1.0 MVP
 

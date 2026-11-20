@@ -72,7 +72,17 @@ def execute_with_failover(
     routes: Iterable[str],
     call: Callable[[str], T],
     breaker: CircuitBreaker,
+    *,
+    response_started: bool = False,
+    external_side_effect: bool = False,
 ) -> FailoverResult[T]:
+    """Execute before-output requests with bounded route failover.
+
+    Once a response has started or an external side effect may have happened,
+    retrying another route could duplicate output or the real-world action.
+    Callers must explicitly mark either condition; the safe default remains
+    failover before output and side effects.
+    """
     attempts: list[str] = []
     errors: list[str] = []
     for route in routes:
@@ -86,6 +96,6 @@ def execute_with_failover(
         except Exception as exc:
             errors.append(f"{route}: {exc}")
             breaker.record_failure(route)
-            if not is_retryable_error(exc):
+            if response_started or external_side_effect or not is_retryable_error(exc):
                 break
     return FailoverResult(None, None, tuple(attempts), tuple(errors))
