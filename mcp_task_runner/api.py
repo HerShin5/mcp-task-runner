@@ -11,6 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from .approvals import ApprovalStore, LocalApprovalGateway
+from .approval_callbacks import ApprovalCallbackHandler, approval_request_dict
 from .core import EvidenceLog, RiskLevel, TaskRunner, ToolRegistry, ToolSpec, VerificationResult
 from .windows_diagnostics import build_read_only_plan
 
@@ -19,6 +20,18 @@ class ApiState:
     def __init__(self) -> None:
         self.approvals = ApprovalStore()
         self.evidence = EvidenceLog()
+        self.callback_handler = ApprovalCallbackHandler(self.approvals)
+
+    def create_pending_demo(self) -> dict[str, Any]:
+        """Create a pending request for local callback testing only."""
+        task_id = "api-demo-task"
+        request = self.approvals.create(
+            task_id,
+            ToolSpec("restart_demo", "simulated service restart", RiskLevel.WRITE, True),
+            {},
+            requester="api-demo",
+        )
+        return approval_request_dict(request)
 
     def run_demo(self, approved: bool) -> dict[str, Any]:
         registry = ToolRegistry()
@@ -41,7 +54,10 @@ def make_handler(state: ApiState):
 
         def do_GET(self):  # noqa: N802
             if self.path == "/health":
-                self._json(200, {"ok": True, "service": "mcp-task-runner"})
+                self._json(200, {"ok": True, "service": "mcp-task-runner", "mode": "development"})
+                return
+            if self.path == "/approval-demo/pending":
+                self._json(200, state.create_pending_demo())
                 return
             if self.path.startswith("/diagnostic-plan"):
                 self._json(200, build_read_only_plan(endpoint="http://127.0.0.1:8766/mcp"))
@@ -49,6 +65,17 @@ def make_handler(state: ApiState):
             self._json(404, {"error": "not found"})
 
         def do_POST(self):  # noqa: N802
+            if self.path == "/approval-callback":
+                length = int(self.headers.get("Content-Length", "0"))
+                raw = self.rfile.read(length) if length else b"{}"
+                try:
+                    payload = json.loads(raw)
+                    result = state.callback_handler.handle(payload, approver=str(payload.get("approver", "unknown")))
+                except (json.JSONDecodeError, AttributeError):
+                    self._json(400, {"accepted": False, "status": "invalid", "message": "body must be JSON"})
+                    return
+                self._json(200 if result.accepted else 403, result.__dict__)
+                return
             if self.path != "/approval-demo":
                 self._json(404, {"error": "not found"})
                 return

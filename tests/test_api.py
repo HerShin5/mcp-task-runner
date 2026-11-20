@@ -1,9 +1,9 @@
 import json
-from urllib.request import Request, urlopen
+from http.server import ThreadingHTTPServer
 from threading import Thread
+from urllib.request import Request, urlopen
 
 from mcp_task_runner.api import ApiState, make_handler
-from http.server import ThreadingHTTPServer
 
 
 def test_api_health_and_approval_demo():
@@ -13,7 +13,10 @@ def test_api_health_and_approval_demo():
     base = f"http://127.0.0.1:{server.server_port}"
     try:
         with urlopen(base + "/health") as response:
-            assert json.loads(response.read())["ok"] is True
+            health = json.loads(response.read())
+        assert health["ok"] is True
+        assert health["mode"] == "development"
+
         request = Request(
             base + "/approval-demo",
             data=json.dumps({"approved": False}).encode(),
@@ -23,6 +26,21 @@ def test_api_health_and_approval_demo():
         with urlopen(request) as response:
             body = json.loads(response.read())
         assert body["result"]["status"] == "rejected"
+
+        with urlopen(base + "/approval-demo/pending") as response:
+            pending = json.loads(response.read())
+        assert pending["status"] == "pending_approval"
+
+        callback = Request(
+            base + "/approval-callback",
+            data=json.dumps({"task_id": pending["task_id"], "action": "approve", "approver": "api-demo"}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(callback) as response:
+            result = json.loads(response.read())
+        assert result["accepted"] is True
+        assert result["status"] == "approved"
     finally:
         server.shutdown()
         server.server_close()
