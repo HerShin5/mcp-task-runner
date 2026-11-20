@@ -20,6 +20,7 @@ from .health_report import normalize_health_report
 from .repair_plan import build_repair_plan, render_repair_plan
 from .feishu_card import build_approval_card, serialize_card
 from .approval_callbacks import ApprovalCallbackHandler, CallbackResult, approval_request_dict
+from .mock_executor import MockApprovedExecutor, MockExecutionResult
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -113,5 +114,7 @@ __all__ = [
     "ApprovalCallbackHandler",
     "CallbackResult",
     "approval_request_dict",
+    "MockApprovedExecutor",
+    "MockExecutionResult",
     "HeuristicTaskClassifier",
 ]
