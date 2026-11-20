@@ -16,6 +16,7 @@ from .model_client import ModelClientError, ModelReply, OpenAICompatibleClient
 from .routing import PricingBand, RouteObjective, RoutePricing, load_route_pricing, select_route
 from .windows_diagnostics import build_read_only_plan, discover_endpoint
 from .windows_report import collect_read_only_report
+from .health_report import normalize_health_report
 from .capabilities import ModelProfile, load_model_profiles
 from .classifier import HeuristicTaskClassifier
 from .model_routing import choose_model_and_gateway
@@ -126,8 +127,8 @@ def run(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "windows-report":
-        report = collect_read_only_report(_client_from_args(args))
-        print(json.dumps(report, ensure_ascii=False, indent=2))
+        raw_report = collect_read_only_report(_client_from_args(args))
+        print(json.dumps(normalize_health_report(raw_report), ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "diagnose-plan":

@@ -16,6 +16,7 @@ from .model_routing import ModelRouteCandidate, ModelRouteDecision, choose_model
 from .orchestrator import RoutedPlan, RoutingDecision, StaticTaskClassifier, TaskClassifier, plan_with_route
 from .mcp_registry import DEFAULT_READ_ONLY_TOOLS, register_discovered_tools
 from .windows_report import DiagnosticResult, collect_read_only_report
+from .health_report import normalize_health_report
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -101,5 +102,6 @@ __all__ = [
     "register_discovered_tools",
     "DiagnosticResult",
     "collect_read_only_report",
+    "normalize_health_report",
     "HeuristicTaskClassifier",
 ]
