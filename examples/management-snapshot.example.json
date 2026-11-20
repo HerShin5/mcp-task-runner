@@ -1,0 +1,27 @@
+{
+  "provider": "example-gateway",
+  "observed_at": "2026-11-20T00:00:00Z",
+  "groups": [
+    {
+      "id": "group-1",
+      "name": "example-models",
+      "platform": "openai",
+      "status": "active",
+      "rate_multiplier": 0.02,
+      "rpm_limit": 60,
+      "models": [
+        {"name": "example-model", "enabled": true, "long_context_pricing_enabled": true}
+      ],
+      "health_state": "healthy",
+      "error_rate": 0.01,
+      "ttft_ms": 1200,
+      "cache_rate": 0.85
+    }
+  ],
+  "account": {
+    "balance": 20.0,
+    "frozen_balance": 0.0,
+    "concurrency": 10,
+    "status": "active"
+  }
+}
