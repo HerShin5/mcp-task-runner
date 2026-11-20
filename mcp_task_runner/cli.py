@@ -18,6 +18,7 @@ from .routing import PricingBand, RouteObjective, RoutePricing, load_route_prici
 from .windows_diagnostics import build_read_only_plan, discover_endpoint
 from .windows_report import collect_read_only_report
 from .health_report import normalize_health_report, render_human_report
+from .repair_plan import build_repair_plan, render_repair_plan
 from .capabilities import ModelProfile, load_model_profiles
 from .classifier import HeuristicTaskClassifier
 from .model_routing import choose_model_and_gateway
@@ -46,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_endpoint_options(report)
     report.add_argument("--format", choices=["json", "text"], default="json")
     report.add_argument("--ascii", action="store_true", help="use ASCII status markers for legacy Windows consoles")
+    report.add_argument("--repair-plan", action="store_true", help="also print a non-executable remediation proposal")
 
     plan = sub.add_parser("diagnose-plan", help="print the read-only Windows-MCP diagnostic plan")
     plan.add_argument("--url", default="http://127.0.0.1:8766/mcp")
@@ -135,8 +137,13 @@ def run(argv: Sequence[str] | None = None) -> int:
         if args.format == "text":
             ascii_only = args.ascii or (sys.stdout.encoding or "").lower() not in {"utf-8", "utf8"}
             print(render_human_report(report, ascii_only=ascii_only))
+            if args.repair_plan:
+                print("\n" + render_repair_plan(build_repair_plan(report)))
         else:
-            print(json.dumps(report, ensure_ascii=False, indent=2))
+            payload = {"report": report}
+            if args.repair_plan:
+                payload["repair_plan"] = build_repair_plan(report)
+            print(json.dumps(payload if args.repair_plan else report, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "diagnose-plan":
