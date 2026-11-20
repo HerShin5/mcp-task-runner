@@ -18,6 +18,7 @@ from .mcp_registry import DEFAULT_READ_ONLY_TOOLS, register_discovered_tools
 from .windows_report import DiagnosticResult, collect_read_only_report
 from .health_report import normalize_health_report
 from .repair_plan import build_repair_plan, render_repair_plan
+from .feishu_card import build_approval_card, serialize_card
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -106,5 +107,7 @@ __all__ = [
     "normalize_health_report",
     "build_repair_plan",
     "render_repair_plan",
+    "build_approval_card",
+    "serialize_card",
     "HeuristicTaskClassifier",
 ]
