@@ -25,6 +25,7 @@ def test_joint_router_filters_capability_before_price():
     requirements = TaskRequirements("code_agent", {"coding": 4, "tool_calling": 4}, cost_preference="cost")
     decision = choose_model_and_gateway(profiles, providers, health, pricing, requirements, input_tokens=10, output_tokens=10)
     assert decision.selected.model.name == "expensive-capable"
+    assert len(decision.candidates) == 1
     assert decision.selected.provider.name == "expensive-gateway"
 
 

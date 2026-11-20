@@ -52,7 +52,7 @@ def execute_read_only_plan(
             continue
         try:
             value = client.call_read_only(tool_name, step.get("arguments", {}), allowed_tools={tool_name}, retries=retries)
-            results.append(DiagnosticResult(tool_name, "ok", value=value))
+            results.append(DiagnosticResult.from_mcp(tool_name, value))
         except Exception as exc:
             results.append(DiagnosticResult(tool_name, "failed", error=str(exc)))
 

@@ -52,7 +52,7 @@ def choose_model_and_gateway(
     profile_map = {profile.name: profile for profile in profiles}
     providers_by_model: dict[str, list[ProviderConfig]] = {}
     for provider in providers:
-        for model_name in (provider.model, *provider.models):
+        for model_name in dict.fromkeys((provider.model, *provider.models)):
             if model_name:
                 providers_by_model.setdefault(model_name, []).append(provider)
 

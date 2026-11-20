@@ -74,7 +74,11 @@ def plan_with_route(
     )
     if decision.selected is None:
         raise RuntimeError("no model/gateway satisfies task requirements")
-    client = client_factory(decision)
+    return plan_from_decision(user_goal, RoutingDecision(requirements, decision), registry, client_factory(decision))
+
+
+def plan_from_decision(user_goal: str, decision: RoutingDecision, registry, client) -> RoutedPlan:
+    """Request and validate a plan without selecting a second route."""
     tool_catalog = [
         {
             "name": tool.name,
@@ -95,7 +99,7 @@ def plan_with_route(
     )
     plan = parse_and_validate(reply.text, registry)
     return RoutedPlan(
-        RoutingDecision(requirements, decision),
+        decision,
         plan,
         reply.provider,
         reply.model,

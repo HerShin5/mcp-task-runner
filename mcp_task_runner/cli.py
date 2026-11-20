@@ -22,9 +22,7 @@ from .health_report import normalize_health_report, render_human_report
 from .repair_plan import build_repair_plan, render_repair_plan
 from .capabilities import ModelProfile, load_model_profiles
 from .classifier import HeuristicTaskClassifier
-from .model_routing import choose_model_and_gateway
-from .orchestrator import plan_with_route
-from .quality import QualityAssessment
+from .orchestrator import RoutingDecision, plan_from_decision, plan_with_route
 from .mcp_registry import register_discovered_tools
 from .gateway_catalog import GatewayCatalog
 from .management import GenericHttpManagementAdapter
@@ -169,7 +167,7 @@ def run(argv: Sequence[str] | None = None) -> int:
             if args.repair_plan:
                 payload["repair_plan"] = build_repair_plan(report)
             print(json.dumps(payload if args.repair_plan else report, ensure_ascii=False, indent=2))
-        return 0
+        return 0 if report["state"] == "healthy" else 2
 
     if args.command == "diagnose-plan":
         print(json.dumps(build_read_only_plan(endpoint=args.url), ensure_ascii=False, indent=2))
@@ -276,17 +274,13 @@ def run(argv: Sequence[str] | None = None) -> int:
         snapshots = catalog.health()
         providers = catalog.providers
         profiles = load_model_profiles(args.profiles)
-        health = [item.health for item in snapshots]
-        pricing = catalog.pricing
-        management = [item.management for item in snapshots if item.management is not None]
         registry = ToolRegistry()
         registry.register(ToolSpec("health", "read-only health check", RiskLevel.READ_ONLY, True))
         registry.register(ToolSpec("inspect_repository", "read-only repository inspection", RiskLevel.READ_ONLY, True))
         requirements = HeuristicTaskClassifier().classify(goal)
-        quality: list[QualityAssessment] = []
-        decision = choose_model_and_gateway(
-            profiles, providers, health, pricing, requirements,
-            input_tokens=args.input_tokens, output_tokens=args.output_tokens, quality=quality,
+        decision = catalog.select_model_and_gateway(
+            profiles, requirements, snapshots=snapshots,
+            input_tokens=args.input_tokens, output_tokens=args.output_tokens,
         )
         if decision.selected is None:
             print(json.dumps({"error": "no capable healthy model/gateway route"}, ensure_ascii=False))
@@ -304,19 +298,7 @@ def run(argv: Sequence[str] | None = None) -> int:
             model_timeout=args.model_timeout,
         )
         try:
-            result = plan_with_route(
-                user_goal=goal,
-                classifier=HeuristicTaskClassifier(),
-                profiles=profiles,
-                providers=providers,
-                health=health,
-                pricing=pricing,
-                registry=registry,
-                client_factory=lambda _: client,
-                input_tokens=args.input_tokens,
-                output_tokens=args.output_tokens,
-                management=management,
-            )
+            result = plan_from_decision(goal, RoutingDecision(requirements, decision), registry, client)
         except (ModelClientError, PlanValidationError) as exc:
             print(json.dumps({"error": "model_plan_rejected", "detail": str(exc)}, ensure_ascii=False))
             return 2
@@ -403,7 +385,7 @@ def run(argv: Sequence[str] | None = None) -> int:
             },
             "safety": {"read_only": True, "write_tools_enabled": False},
         }, ensure_ascii=False, indent=2))
-        return 0 if result.execution.status in {"executed", "degraded"} else 2
+        return 0 if result.execution.status == "executed" else 2
 
     return 2
 

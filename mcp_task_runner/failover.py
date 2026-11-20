@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 from time import monotonic
 from typing import Callable, Iterable, TypeVar
+from urllib.error import HTTPError, URLError
 
 
 class CircuitState(str, Enum):
@@ -62,10 +63,17 @@ class FailoverResult:
 
 def is_retryable_error(error: BaseException) -> bool:
     """Transport-like failures may fail over; policy/input errors may not."""
+    cause = error.__cause__ or error
+    if isinstance(cause, HTTPError):
+        return cause.code in {429, 502, 503, 504}
+    if isinstance(cause, URLError):
+        cause = cause.reason
+    if isinstance(cause, TimeoutError):
+        return True
     text = str(error).lower()
     if any(code in text for code in ("400", "401", "403", "404", "422")):
         return False
-    return any(marker in text for marker in ("timeout", "429", "502", "503", "504", "connection", "temporarily"))
+    return any(marker in text for marker in ("timeout", "timed out", "429", "502", "503", "504", "connection", "temporarily"))
 
 
 def execute_with_failover(
@@ -85,7 +93,11 @@ def execute_with_failover(
     """
     attempts: list[str] = []
     errors: list[str] = []
+    seen: set[str] = set()
     for route in routes:
+        if route in seen:
+            continue
+        seen.add(route)
         if not breaker.allow(route):
             continue
         attempts.append(route)

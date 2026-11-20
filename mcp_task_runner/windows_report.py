@@ -20,6 +20,12 @@ class DiagnosticResult:
     value: Any = None
     error: str | None = None
 
+    @classmethod
+    def from_mcp(cls, tool: str, value: Any) -> DiagnosticResult:
+        if isinstance(value, dict) and value.get("isError") is True:
+            return cls(tool, "failed", error="MCP tool reported an error")
+        return cls(tool, "ok", value=value)
+
 
 def collect_read_only_report(
     client: StreamableHttpMcpClient,
@@ -36,7 +42,7 @@ def collect_read_only_report(
     for tool_name in sorted(discovered_names & allowed_tools):
         try:
             value = client.call_read_only(tool_name, {}, allowed_tools=set(allowed_tools), retries=retries)
-            results.append(DiagnosticResult(tool_name, "ok", value=value))
+            results.append(DiagnosticResult.from_mcp(tool_name, value))
         except Exception as exc:  # report one failed check without running another class of tool
             results.append(DiagnosticResult(tool_name, "failed", error=str(exc)))
 
