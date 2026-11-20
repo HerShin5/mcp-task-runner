@@ -1,6 +1,8 @@
 import json
 from unittest.mock import patch
 
+import pytest
+
 from mcp_task_runner import BalanceSnapshot
 from mcp_task_runner.management import (
     AccountSnapshot,
@@ -8,6 +10,7 @@ from mcp_task_runner.management import (
     ManagementAdapterError,
     ManagementSnapshot,
     ManagementSnapshotStore,
+    resolve_management_route,
     load_snapshot_fixture,
     snapshot_from_generic_payload,
 )
@@ -39,6 +42,17 @@ def test_management_payload_normalizes_groups_models_health_and_balance():
 def test_management_account_snapshot_does_not_replace_balance_alert_snapshot():
     assert BalanceSnapshot("gateway", 1.0).balance == 1.0
     assert AccountSnapshot(1.0, concurrency=2).concurrency == 2
+
+
+@pytest.mark.parametrize("field", ["group", "model"])
+@pytest.mark.parametrize("flag,eligible", [(False, False), ("false", False), (None, False),
+                                          ("unknown", False), (1, False), (True, True), (" TRUE ", True)])
+def test_management_enabled_flag_controls_route(field, flag, eligible):
+    model = {"name": "test-model"}
+    group = {"id": "g", "models": [model]}
+    (group if field == "group" else model)["enabled"] = flag
+    snapshot = snapshot_from_generic_payload("gateway", {"groups": [group]})
+    assert (resolve_management_route(snapshot, "test-model") is not None) is eligible
 
 
 def test_fixture_loader_infers_provider_and_tolerates_non_object_data(tmp_path):

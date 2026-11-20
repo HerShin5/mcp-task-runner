@@ -202,6 +202,11 @@ _BLOCKED_STATES = frozenset({
 })
 
 
+def _enabled(value: Any) -> bool:
+    """Only explicit true values enable a group or model."""
+    return value is True or (isinstance(value, str) and value.strip().lower() == "true")
+
+
 def _number(value: Any) -> float | None:
     try:
         return float(value) if value is not None else None
@@ -258,7 +263,7 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
             elif isinstance(model, dict) and model.get("name"):
                 models.append(ModelSnapshot(
                     str(model["name"]),
-                    bool(model.get("enabled", True)),
+                    _enabled(model.get("enabled", True)),
                     _number(model.get("rate_multiplier")),
                     model.get("long_context_pricing_enabled"),
                 ))
@@ -266,7 +271,7 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
             id=str(raw.get("id", raw.get("group_id", raw.get("name", "unknown")))),
             name=str(raw.get("name", "unnamed")),
             platform=raw.get("platform"),
-            enabled=bool(raw.get("enabled", raw.get("status", "active") == "active")),
+            enabled=_enabled(raw.get("enabled", raw.get("status", "active") == "active")),
             rate_multiplier=_number(raw.get("rate_multiplier")),
             models=tuple(models),
             rpm_limit=_integer(raw.get("rpm_limit")),

@@ -45,12 +45,15 @@ class SQLiteApprovalStore:
     def create(self, task_id, tool, arguments, *, requester="system"):
         created = time()
         with self._lock, self._connect() as db:
-            db.execute(
-                "INSERT OR REPLACE INTO approvals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            inserted = db.execute(
+                "INSERT INTO approvals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(task_id) DO NOTHING",
                 (task_id, tool.name, tool.description, tool.risk_level.value, int(tool.supports_verify),
                  json.dumps(arguments, ensure_ascii=False), ApprovalStatus.PENDING.value, requester,
                  None, "", created, None),
             )
+            if inserted.rowcount != 1:
+                raise ValueError("approval task ID already exists")
         return self.get(task_id)
 
     def get(self, task_id):

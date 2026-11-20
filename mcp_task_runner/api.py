@@ -10,6 +10,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+from uuid import uuid4
 
 from .approvals import ApprovalStore, LocalApprovalGateway
 from .approval_callbacks import ApprovalCallbackHandler, approval_request_dict
@@ -25,7 +26,7 @@ class ApiState:
 
     def create_pending_demo(self) -> dict[str, Any]:
         """Create a pending request for local callback testing only."""
-        task_id = "api-demo-task"
+        task_id = str(uuid4())
         request = self.approvals.create(
             task_id,
             ToolSpec("restart_demo", "simulated service restart", RiskLevel.WRITE, True),

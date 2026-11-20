@@ -88,7 +88,10 @@ def check_provider(provider: ProviderConfig) -> ProviderHealth:
             if 200 <= status < 300:
                 available_models = _model_ids(response)
                 model_available = provider.model in available_models if available_models is not None else None
-                detail = "models endpoint reachable" if model_available is not False else "model not reported by endpoint"
+                if model_available is None:
+                    detail = "models endpoint reachable; model availability unknown"
+                else:
+                    detail = "models endpoint reachable" if model_available else "model not reported by endpoint"
                 return ProviderHealth(provider.name, True, status, detail, provider.model, model_available, latency_ms, tuple(available_models or ()))
             return ProviderHealth(provider.name, False, status, "models endpoint returned a non-success status", provider.model, False, latency_ms)
     except HTTPError as exc:
@@ -112,6 +115,7 @@ def _model_ids(response: Any) -> set[str] | None:
 def choose_first_healthy(providers: list[ProviderConfig], health: list[ProviderHealth]) -> ProviderConfig | None:
     by_name = {item.name: item for item in health}
     for provider in sorted(providers, key=lambda item: item.priority):
-        if by_name.get(provider.name, ProviderHealth(provider.name, False, None, "not checked", provider.model)).reachable:
+        status = by_name.get(provider.name)
+        if provider.enabled and status and status.reachable and status.model == provider.model and status.model_available is True:
             return provider
     return None

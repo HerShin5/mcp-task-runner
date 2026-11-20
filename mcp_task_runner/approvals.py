@@ -39,6 +39,8 @@ class ApprovalStore:
     def create(self, task_id: str, tool: ToolSpec, arguments: dict[str, Any], *, requester: str = "system") -> ApprovalRequest:
         request = ApprovalRequest(task_id, tool, dict(arguments), requester=requester, created_at=time())
         with self._lock:
+            if task_id in self._requests:
+                raise ValueError("approval task ID already exists")
             self._requests[task_id] = request
         return request
 
