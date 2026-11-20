@@ -37,9 +37,18 @@ def normalize_health_report(raw: dict[str, Any]) -> dict[str, Any]:
         state = "healthy"
         summary = f"{ok_count} 项只读诊断检查通过"
 
+    suggestions: list[str] = []
+    if state == "degraded":
+        suggestions.append("先检查交互桌面、desktop-bridge 进程和 MCP 服务日志")
+        if any(isinstance(item, dict) and item.get("tool") == "snapshot" and item.get("status") == "failed" for item in results):
+            suggestions.append("snapshot 超时可先重试；若持续失败，再检查 UIA/Session 绑定")
+    elif state == "unknown":
+        suggestions.append("先确认 MCP 会话、认证和 endpoint 是否可用")
+
     return {
         "state": state,
         "summary": summary,
+        "suggestions": suggestions,
         "protocol": raw.get("protocol"),
         "server": raw.get("server"),
         "discovered_tool_count": discovered,
@@ -79,6 +88,9 @@ def render_human_report(report: dict[str, Any], *, ascii_only: bool = False) -> 
             lines.append(f"  {item_icon} {item.get('tool', 'unknown')}: {detail}")
     else:
         lines.append("  ⚪ 没有执行只读检查")
+    if report.get("suggestions"):
+        lines.extend(["", "建议："])
+        lines.extend(f"  - {item}" for item in report["suggestions"])
     lines.extend([
         "",
         "安全说明：",
