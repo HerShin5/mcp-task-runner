@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -26,6 +27,8 @@ from .orchestrator import plan_with_route
 from .quality import QualityAssessment
 from .mcp_registry import register_discovered_tools
 from .gateway_catalog import GatewayCatalog
+from .management import GenericHttpManagementAdapter
+from .routed_client import RoutedModelClient, RoutedPlanClient
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -68,6 +71,10 @@ def build_parser() -> argparse.ArgumentParser:
     live_plan.add_argument("--profiles", default="model_profiles.example.json")
     live_plan.add_argument("--input-tokens", type=int, default=4000)
     live_plan.add_argument("--output-tokens", type=int, default=1000)
+    live_plan.add_argument("--management-url", help="optional authorized JSON management endpoint")
+    live_plan.add_argument("--management-provider", help="provider name for --management-url")
+    live_plan.add_argument("--management-token-env", default="MCP_TASK_RUNNER_MANAGEMENT_TOKEN")
+    live_plan.add_argument("--management-max-age", type=float, default=300.0)
 
     return parser
 
@@ -232,10 +239,25 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "live-plan":
         goal = " ".join(args.goal)
-        providers = load_provider_configs(args.providers)
+        catalog = GatewayCatalog(args.providers)
+        if args.management_url:
+            if not args.management_provider:
+                print(json.dumps({"error": "--management-provider is required with --management-url"}, ensure_ascii=False))
+                return 2
+            catalog.register_management_adapter(
+                GenericHttpManagementAdapter(
+                    args.management_provider,
+                    args.management_url,
+                    token=os.environ.get(args.management_token_env),
+                ),
+                max_age_seconds=args.management_max_age,
+            )
+        snapshots = catalog.health()
+        providers = catalog.providers
         profiles = load_model_profiles(args.profiles)
-        health = [check_provider(provider) for provider in providers]
-        pricing = load_route_pricing(args.providers)
+        health = [item.health for item in snapshots]
+        pricing = catalog.pricing
+        management = [item.management for item in snapshots if item.management is not None]
         registry = ToolRegistry()
         registry.register(ToolSpec("health", "read-only health check", RiskLevel.READ_ONLY, True))
         registry.register(ToolSpec("inspect_repository", "read-only repository inspection", RiskLevel.READ_ONLY, True))
@@ -249,12 +271,12 @@ def run(argv: Sequence[str] | None = None) -> int:
             print(json.dumps({"error": "no capable healthy model/gateway route"}, ensure_ascii=False))
             return 2
         selected = decision.selected
-        client = OpenAICompatibleClient(
-            base_url=selected.provider.base_url,
-            api_key=selected.provider.api_key,
-            provider=selected.provider.name,
-            model=selected.model.name,
-        )
+        route_order = [
+            item.provider.name
+            for item in decision.candidates
+            if item.model.name == selected.model.name
+        ]
+        client = RoutedPlanClient(RoutedModelClient(providers), selected.model.name, route_order)
         try:
             result = plan_with_route(
                 user_goal=goal,
@@ -267,6 +289,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                 client_factory=lambda _: client,
                 input_tokens=args.input_tokens,
                 output_tokens=args.output_tokens,
+                management=management,
             )
         except (ModelClientError, PlanValidationError) as exc:
             print(json.dumps({"error": "model_plan_rejected", "detail": str(exc)}, ensure_ascii=False))
@@ -280,6 +303,11 @@ def run(argv: Sequence[str] | None = None) -> int:
             "latency_ms": result.latency_ms,
             "plan": result.plan.to_dict(),
             "execution": "not_started",
+            "failover": {
+                "attempts": list(client.last_result.attempts) if client.last_result else [],
+                "route": client.last_result.route if client.last_result else None,
+                "errors": list(client.last_result.errors) if client.last_result else [],
+            },
         }, ensure_ascii=False, indent=2))
         return 0
 

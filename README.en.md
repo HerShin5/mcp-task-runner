@@ -148,6 +148,26 @@ The offline demos show the intended behavior:
 - complex operations select a stronger capable model;
 - simple text transformation selects a cheaper eligible model;
 - generated plans are validated before execution;
+
+For a low-risk sandbox run, copy `providers.example.json` to a local `sandbox.providers.json` and fill in only a test gateway, test model, and low-privilege key; the file is ignored by Git. Check health and routing first:
+
+```powershell
+python -m mcp_task_runner.cli providers-health --config sandbox.providers.json
+python -m mcp_task_runner.cli route-select --config sandbox.providers.json --input-tokens 4000 --output-tokens 1000
+```
+
+Then run a real plan-only request:
+
+```powershell
+$env:MCP_TASK_RUNNER_MANAGEMENT_TOKEN = "temporary-local-management-token"
+python -m mcp_task_runner.cli live-plan "check service health and propose a read-only diagnostic plan" `
+  --providers sandbox.providers.json `
+  --profiles model_profiles.example.json `
+  --management-url https://management.example.com/snapshot `
+  --management-provider example-gateway
+```
+
+The management token is read only from the environment. Output includes the selected gateway, validated plan, and failover attempts; no `click`, `type_text`, `launch`, or other write tool is executed.
 - no network or system side effect is performed.
 
 ## Configure your own gateways

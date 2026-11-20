@@ -1,7 +1,7 @@
 from mcp_task_runner.failover import CircuitBreaker
 from mcp_task_runner.model_client import ModelReply, ModelClientError
 from mcp_task_runner.providers import ProviderConfig
-from mcp_task_runner.routed_client import RoutedModelClient
+from mcp_task_runner.routed_client import RoutedModelClient, RoutedPlanClient
 
 
 def test_routed_model_client_fails_over_on_timeout():
@@ -47,3 +47,19 @@ def test_routed_model_client_does_not_fail_over_on_auth_error():
     )
     assert result.reply is None
     assert calls == ["bad"]
+
+
+def test_routed_plan_client_exposes_model_client_shape_and_attempts():
+    provider = ProviderConfig("good", "https://good/v1", "model")
+
+    def factory(_):
+        class Fake:
+            def chat(self, messages, *, response_format=None):
+                return ModelReply('{"goal":"check"}', "good", "model", 1.0, 200, {})
+        return Fake()
+
+    client = RoutedPlanClient(RoutedModelClient([provider]), "model", ["good"], client_factory=factory)
+    reply = client.chat([{"role": "user", "content": "check"}], response_format={"type": "json_object"})
+    assert reply.text == '{"goal":"check"}'
+    assert client.last_result.route == "good"
+    assert client.last_result.attempts == ("good",)

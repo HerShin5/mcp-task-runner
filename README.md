@@ -130,6 +130,29 @@ python -m mcp_task_runner.cli live-plan "检查 Windows-MCP 并提出修复计�
 
 `live-plan` 会调用真实模型生成计划，但会在任何工具执行前停止，适合作为第一条真实端到端入口。
 
+低风险沙盒联调建议这样做：
+
+1. 复制 `providers.example.json` 为本机的 `sandbox.providers.json`，只填测试网关、测试模型和低权限 Key；这个文件已被 Git 忽略。
+2. 先只测普通健康和选路：
+
+```powershell
+python -m mcp_task_runner.cli providers-health --config sandbox.providers.json
+python -m mcp_task_runner.cli route-select --config sandbox.providers.json --input-tokens 4000 --output-tokens 1000
+```
+
+3. 再做“只生成计划、不执行工具”的真实联调：
+
+```powershell
+$env:MCP_TASK_RUNNER_MANAGEMENT_TOKEN = "本机临时管理Token"
+python -m mcp_task_runner.cli live-plan "检查服务健康并提出只读诊断计划" `
+  --providers sandbox.providers.json `
+  --profiles model_profiles.example.json `
+  --management-url https://management.example.com/snapshot `
+  --management-provider example-gateway
+```
+
+管理 Token 只从环境变量读取，命令输出会返回选中的网关、计划和 failover 尝试，不会执行 `click`、`type_text`、`launch` 或任何写操作。先确认模型计划能通过本地校验，再考虑接 Windows-MCP 的只读工具。
+
 离线演示会展示：
 
 - 复杂任务选择能力更强的模型；

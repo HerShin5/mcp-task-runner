@@ -26,7 +26,7 @@ from .persistence import SQLiteApprovalStore
 from .plan_executor import PlanExecutionResult, execute_read_only_plan
 from .windows_workflow import WindowsWorkflowResult, run_read_only_workflow
 from .failover import CircuitBreaker, CircuitState, FailoverResult, execute_with_failover, is_retryable_error
-from .routed_client import RoutedChatResult, RoutedModelClient
+from .routed_client import RoutedChatResult, RoutedModelClient, RoutedPlanClient
 from .management import AccountSnapshot, GenericHttpManagementAdapter, GroupSnapshot, ManagementAdapterError, ManagementRoute, ManagementSnapshot, ManagementSnapshotStore, ModelSnapshot, load_snapshot_fixture, resolve_management_route, snapshot_from_generic_payload
 from .classifier import HeuristicTaskClassifier
 from .core import (
@@ -136,6 +136,7 @@ __all__ = [
     "is_retryable_error",
     "RoutedChatResult",
     "RoutedModelClient",
+    "RoutedPlanClient",
     "AccountSnapshot",
     "GenericHttpManagementAdapter",
     "GroupSnapshot",
