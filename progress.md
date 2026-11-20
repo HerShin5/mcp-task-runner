@@ -1,5 +1,15 @@
 # Progress
 
+## 2026-11-21 Handoff Snapshot
+
+- Project paused deliberately after the local MVP was verified. The authoritative restart document is `HANDOFF.md`.
+- Latest verified commit: `48d1059 fix: harden development API authentication`.
+- Verification at pause: `133 passed`, `compileall passed`, clean worktree, `main...origin/main`.
+- Completed production-boundary repairs: atomic SQLite approval decisions, duplicate task protection, explicit boolean parsing, confirmed model inventory requirements, management `required` policy, approved-route enforcement, MCP error propagation, failover replay guards, API loopback/token authentication, server-side approver header, and model response compatibility.
+- Real local evidence: low-risk model plan generation; Windows-MCP read-only execution of `snapshot`, `debug_nodes`, `screenshot`; loopback HTTP failover drill. No production gateway or write-capable desktop tool was used.
+- Deliberate pause: no Feishu public callback, no KiroForge DNS/Nginx/Docker change, no public API exposure, no Windows-MCP write tools.
+- Remaining work is recorded in `HANDOFF.md`: Feishu signature/timestamp/replay/identity validation, HTTPS/rate limiting/audit/backup/secret hardening, streaming boundary, more provider adapters, observability, and release `v0.1.0`.
+
 ## 2026-11-19
 - Confirmed project direction with user: independent GitHub work, AI automation/Agent/MCP reliability.
 - Confirmed MVP: Windows-MCP diagnostic scenario, CLI + API-oriented core, simulated MCP + real adapter later.

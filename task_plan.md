@@ -33,8 +33,11 @@ Build a small, testable AI automation execution core that plans MCP/API work, bl
 - Add Feishu card approval adapter (disabled by default).
 - Add OpenAI-compatible provider health checks and manual route config.
 
-## Next Step
-Prepare a redacted first end-to-end sandbox configuration. Before live testing, ask the user for one low-risk gateway, one model, and a non-production API key/group key through an approved secret channel.
+## Current Status
+MVP and low-risk local validation are complete. The project is intentionally paused before Feishu deployment and public exposure. The authoritative restart point is `HANDOFF.md`.
+
+## Next Step When Resumed
+Read `HANDOFF.md`, run the verification commands there, then choose one explicitly scoped item from its P0/P1 list. Do not modify KiroForge DNS/Nginx or deploy Feishu merely because the project is resumed.
 
 ## Decisions
 - Project name remains an internal codename until the MVP works.
