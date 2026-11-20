@@ -8,8 +8,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from time import time
+from typing import Any, Protocol
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 @dataclass(frozen=True)
@@ -51,12 +55,140 @@ class ManagementSnapshot:
     balance: AccountSnapshot | None = None
     observed_at: str | None = None
 
+    def observed_epoch(self) -> float | None:
+        if not self.observed_at:
+            return None
+        try:
+            value = self.observed_at.replace("Z", "+00:00")
+            return datetime.fromisoformat(value).astimezone(timezone.utc).timestamp()
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    def is_fresh(self, max_age_seconds: float, *, now: float | None = None) -> bool:
+        if max_age_seconds < 0:
+            raise ValueError("management snapshot max age cannot be negative")
+        observed = self.observed_epoch()
+        if observed is None:
+            return False
+        age = (time() if now is None else now) - observed
+        return 0 <= age <= max_age_seconds
+
 
 @dataclass(frozen=True)
 class ManagementRoute:
     group: GroupSnapshot
     model: ModelSnapshot
     rate_multiplier: float
+
+
+class ManagementAdapterError(RuntimeError):
+    """A management endpoint could not produce a valid snapshot."""
+
+
+class ManagementAdapter(Protocol):
+    provider: str
+
+    def fetch(self) -> ManagementSnapshot:
+        """Fetch and normalize one provider's management snapshot."""
+
+
+class GenericHttpManagementAdapter:
+    """Small provider-neutral adapter for JSON management endpoints.
+
+    The endpoint and token are supplied by the caller; neither is logged or
+    persisted. Provider-specific response mapping belongs in a subclass or
+    wrapper that calls ``snapshot_from_generic_payload``.
+    """
+
+    def __init__(
+        self,
+        provider: str,
+        endpoint: str,
+        *,
+        token: str | None = None,
+        timeout: float = 8.0,
+        auth_header: str = "Authorization",
+        auth_scheme: str = "Bearer",
+    ) -> None:
+        if not provider or not endpoint:
+            raise ValueError("provider and endpoint are required")
+        if timeout <= 0:
+            raise ValueError("management timeout must be positive")
+        self.provider = provider
+        self.endpoint = endpoint
+        self.token = token
+        self.timeout = timeout
+        self.auth_header = auth_header
+        self.auth_scheme = auth_scheme
+
+    def fetch(self) -> ManagementSnapshot:
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "mcp-task-runner-management/0.1",
+        }
+        if self.token:
+            headers[self.auth_header] = f"{self.auth_scheme} {self.token}" if self.auth_scheme else self.token
+        request = Request(self.endpoint, headers=headers, method="GET")
+        try:
+            with urlopen(request, timeout=self.timeout) as response:
+                status = getattr(response, "status", None)
+                if status is None:
+                    status = response.getcode()
+                if not 200 <= status < 300:
+                    raise ManagementAdapterError(f"management endpoint returned HTTP {status}")
+                payload = json.loads(response.read().decode("utf-8"))
+        except ManagementAdapterError:
+            raise
+        except HTTPError as exc:
+            raise ManagementAdapterError(f"management endpoint rejected request ({exc.code})") from exc
+        except (URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ManagementAdapterError("management endpoint unavailable or invalid") from exc
+        if not isinstance(payload, dict):
+            raise ManagementAdapterError("management endpoint must return a JSON object")
+        observed_at = payload.get("observed_at") or datetime.now(timezone.utc).isoformat()
+        payload = {**payload, "observed_at": observed_at}
+        return snapshot_from_generic_payload(self.provider, payload)
+
+
+class ManagementSnapshotStore:
+    """Refreshes one adapter and only exposes snapshots within its TTL."""
+
+    def __init__(self, adapter: ManagementAdapter, *, max_age_seconds: float = 300.0) -> None:
+        if max_age_seconds < 0:
+            raise ValueError("management snapshot max age cannot be negative")
+        self.adapter = adapter
+        self.max_age_seconds = max_age_seconds
+        self._snapshot: ManagementSnapshot | None = None
+        self._last_error: ManagementAdapterError | None = None
+
+    @property
+    def last_error(self) -> ManagementAdapterError | None:
+        return self._last_error
+
+    def refresh(self) -> ManagementSnapshot:
+        snapshot = self.adapter.fetch()
+        if snapshot.provider != self.adapter.provider:
+            raise ManagementAdapterError("management adapter returned the wrong provider")
+        self._snapshot = snapshot
+        self._last_error = None
+        return snapshot
+
+    def get(self, *, now: float | None = None) -> ManagementSnapshot | None:
+        if self._snapshot is None:
+            return None
+        if not self._snapshot.is_fresh(self.max_age_seconds, now=now):
+            return None
+        return self._snapshot
+
+    def refresh_if_stale(self, *, now: float | None = None) -> ManagementSnapshot | None:
+        if self.get(now=now) is not None:
+            return self.get(now=now)
+        try:
+            self.refresh()
+        except ManagementAdapterError as exc:
+            self._last_error = exc
+            return None
+        return self.get(now=now)
 
 
 _BLOCKED_STATES = frozenset({

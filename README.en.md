@@ -183,6 +183,8 @@ Management-plane data can be attached through a redacted snapshot. For local dev
 
 When attached to routing, disabled, blocked, offline, or model-missing groups are excluded; group/model multipliers affect estimated cost and reported error rates add a reliability penalty. Without a management snapshot, the existing health probe and manual pricing configuration remain the source of truth, so a temporary management-plane outage does not silently authorize a route.
 
+Runtime adapters use `ManagementSnapshotStore` for refresh and TTL handling: an expired snapshot or failed refresh is removed from routing instead of reusing old balance or health data. `GenericHttpManagementAdapter` only reads JSON and keeps the normalized snapshot in memory; it does not write management tokens to config, logs, or fixture files. Provider-specific field mapping belongs in a separate adapter.
+
 ## CLI and local API
 
 ```powershell

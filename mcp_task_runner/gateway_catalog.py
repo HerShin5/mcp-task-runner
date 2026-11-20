@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from .management import ManagementSnapshot, load_snapshot_fixture
+from .management import ManagementAdapter, ManagementSnapshot, ManagementSnapshotStore, load_snapshot_fixture
 from .providers import ProviderConfig, ProviderHealth, check_provider, load_provider_configs
 from .routing import RouteDecision, RouteObjective, RoutePricing, load_route_pricing, select_route
 
@@ -29,6 +29,7 @@ class GatewayCatalog:
         self.providers: list[ProviderConfig] = []
         self.pricing: list[RoutePricing] = []
         self.management: dict[str, ManagementSnapshot] = {}
+        self.management_stores: dict[str, ManagementSnapshotStore] = {}
         self.reload()
 
     def reload(self) -> None:
@@ -42,7 +43,25 @@ class GatewayCatalog:
             snapshot = load_snapshot_fixture(payload_path)
             self.management[snapshot.provider] = snapshot
 
+    def register_management_adapter(self, adapter: ManagementAdapter, *, max_age_seconds: float = 300.0) -> None:
+        """Attach a runtime adapter without placing credentials in config files."""
+        self.management_stores[adapter.provider] = ManagementSnapshotStore(
+            adapter,
+            max_age_seconds=max_age_seconds,
+        )
+
+    def refresh_management(self, *, now: float | None = None) -> dict[str, ManagementSnapshot]:
+        """Refresh registered adapters and discard snapshots that are stale."""
+        for provider, store in self.management_stores.items():
+            snapshot = store.refresh_if_stale(now=now)
+            if snapshot is None:
+                self.management.pop(provider, None)
+            else:
+                self.management[provider] = snapshot
+        return dict(self.management)
+
     def health(self) -> list[GatewaySnapshot]:
+        self.refresh_management()
         snapshots: list[GatewaySnapshot] = []
         for provider in self.providers:
             status = check_provider(provider)

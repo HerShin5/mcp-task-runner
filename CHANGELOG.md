@@ -7,6 +7,7 @@
 - Added CI, MIT license, architecture, security, and contribution documentation.
 - Added a provider-neutral management snapshot seam and optional catalog fixture loading.
 - Management snapshots now affect ordinary and joint model/gateway routing with fail-closed group/model filtering, multiplier-aware cost, and error-rate penalties.
+- Added a runtime management adapter protocol, generic JSON HTTP adapter, and TTL-backed snapshot store that drops stale data after refresh failures.
 
 ## 0.1.0 MVP
 
