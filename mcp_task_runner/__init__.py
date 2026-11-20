@@ -21,6 +21,7 @@ from .repair_plan import build_repair_plan, render_repair_plan
 from .feishu_card import build_approval_card, serialize_card
 from .approval_callbacks import ApprovalCallbackHandler, CallbackResult, approval_request_dict
 from .mock_executor import MockApprovedExecutor, MockExecutionResult
+from .approval_demo import run_local_approval_demo
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -116,5 +117,6 @@ __all__ = [
     "approval_request_dict",
     "MockApprovedExecutor",
     "MockExecutionResult",
+    "run_local_approval_demo",
     "HeuristicTaskClassifier",
 ]
