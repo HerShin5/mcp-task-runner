@@ -185,6 +185,8 @@ When attached to routing, disabled, blocked, offline, or model-missing groups ar
 
 Runtime adapters use `ManagementSnapshotStore` for refresh and TTL handling: an expired snapshot or failed refresh is removed from routing instead of reusing old balance or health data. `GenericHttpManagementAdapter` only reads JSON and keeps the normalized snapshot in memory; it does not write management tokens to config, logs, or fixture files. Provider-specific field mapping belongs in a separate adapter.
 
+`GatewayCatalog` is the unified entry point: the `providers-health` and `route-select` CLI commands now use it for health checks, management refresh, and routing. Code callers can use `select_model_and_gateway()` to apply capability, health, management, cost, quality, and latency filters from one consistent catalog snapshot.
+
 ## CLI and local API
 
 ```powershell

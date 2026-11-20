@@ -172,6 +172,8 @@ API Key、group key、管理 Token 和 Cookie 只能放在本机配置或密钥�
 
 运行时适配器使用 `ManagementSnapshotStore` 管理刷新和 TTL：快照过期或刷新失败就从路由输入中移除，不继续拿旧余额、旧健康状态做决策。`GenericHttpManagementAdapter` 只负责读取 JSON 和注入内存快照，不会把管理 Token 写入配置、日志或快照文件；供应商私有字段映射应放在单独适配器里。
 
+`GatewayCatalog` 是统一入口：CLI 的 `providers-health` 和 `route-select` 都通过它执行健康检查、管理快照刷新和选路；代码调用方可用 `select_model_and_gateway()` 一次性完成能力筛选、健康筛选、管理面筛选和成本/质量/延迟评分。
+
 ## CLI 与本地 API
 
 ```powershell

@@ -8,8 +8,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
+
+from .capabilities import ModelProfile, TaskRequirements
 from .management import ManagementAdapter, ManagementSnapshot, ManagementSnapshotStore, load_snapshot_fixture
+from .model_routing import ModelRouteDecision, choose_model_and_gateway
 from .providers import ProviderConfig, ProviderHealth, check_provider, load_provider_configs
+from .quality import QualityAssessment
 from .routing import RouteDecision, RouteObjective, RoutePricing, load_route_pricing, select_route
 
 
@@ -84,4 +89,27 @@ class GatewayCatalog:
             output_tokens=output_tokens,
             objective=objective,
             management=self.management.values(),
+        )
+
+    def select_model_and_gateway(
+        self,
+        profiles: Iterable[ModelProfile],
+        requirements: TaskRequirements,
+        *,
+        input_tokens: int,
+        output_tokens: int,
+        quality: Iterable[QualityAssessment] = (),
+    ) -> ModelRouteDecision:
+        """Select a capable model using one consistent catalog snapshot."""
+        snapshots = self.health()
+        return choose_model_and_gateway(
+            profiles,
+            self.providers,
+            [item.health for item in snapshots],
+            self.pricing,
+            requirements,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            quality=quality,
+            management=[item.management for item in snapshots if item.management is not None],
         )

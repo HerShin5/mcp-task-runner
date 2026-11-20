@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 from mcp_task_runner.gateway_catalog import GatewayCatalog
+from mcp_task_runner.capabilities import ModelProfile, TaskRequirements
 from mcp_task_runner.providers import ProviderHealth
 
 
@@ -94,3 +95,31 @@ def test_catalog_attaches_optional_management_fixture(tmp_path):
         snapshots = catalog.health()
     assert snapshots[0].management.provider == "first"
     assert snapshots[0].management.groups[0].models[0].name == "model"
+
+
+def test_catalog_joint_selection_uses_the_same_health_and_management_snapshot(tmp_path):
+    config = tmp_path / "gateways.json"
+    config.write_text(json.dumps({
+        "providers": [{
+            "name": "first",
+            "base_url": "https://first/v1",
+            "model": "model",
+            "pricing": {"short": {"input": 1, "output": 1}},
+        }]
+    }), encoding="utf-8")
+    config.with_suffix(".management.json").write_text(json.dumps({
+        "provider": "first",
+        "observed_at": "2099-01-01T00:00:00+00:00",
+        "groups": [{"id": "g1", "name": "primary", "models": ["model"], "health_state": "healthy"}],
+    }), encoding="utf-8")
+
+    catalog = GatewayCatalog(config)
+    with patch("mcp_task_runner.gateway_catalog.check_provider", return_value=ProviderHealth("first", True, 200, "ok", "model", True, 50)):
+        decision = catalog.select_model_and_gateway(
+            [ModelProfile("model", {"tool_calling": 4})],
+            TaskRequirements("ops", {"tool_calling": 4}),
+            input_tokens=10,
+            output_tokens=2,
+        )
+    assert decision.selected.provider.name == "first"
+    assert decision.selected.management.group.id == "g1"

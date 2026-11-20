@@ -25,6 +25,7 @@ from .model_routing import choose_model_and_gateway
 from .orchestrator import plan_with_route
 from .quality import QualityAssessment
 from .mcp_registry import register_discovered_tools
+from .gateway_catalog import GatewayCatalog
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -86,20 +87,16 @@ def run(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     if args.command == "providers-health":
-        providers = load_provider_configs(args.config)
-        health = [check_provider(provider) for provider in providers]
-        selected = choose_first_healthy(providers, health)
+        catalog = GatewayCatalog(args.config)
+        snapshots = catalog.health()
+        health = [item.health for item in snapshots]
+        selected = choose_first_healthy(catalog.providers, health)
         print(json.dumps({"providers": [item.__dict__ for item in health], "selected": selected.name if selected else None}, indent=2))
         return 0 if selected else 1
 
     if args.command == "route-select":
-        providers = load_provider_configs(args.config)
-        health = [check_provider(provider) for provider in providers]
-        pricing = load_route_pricing(args.config)
-        decision = select_route(
-            providers,
-            health,
-            pricing,
+        catalog = GatewayCatalog(args.config)
+        decision = catalog.select(
             input_tokens=args.input_tokens,
             output_tokens=args.output_tokens,
             objective=RouteObjective(args.objective),
