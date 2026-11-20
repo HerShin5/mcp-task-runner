@@ -51,10 +51,11 @@ def normalize_health_report(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def render_human_report(report: dict[str, Any]) -> str:
+def render_human_report(report: dict[str, Any], *, ascii_only: bool = False) -> str:
     """Render a concise Chinese report for a human operator."""
     state = str(report.get("state", "unknown"))
-    icon = _STATE_ICONS.get(state, "⚪")
+    icons = {"healthy": "[OK]", "degraded": "[WARN]", "unknown": "[?]"} if ascii_only else _STATE_ICONS
+    icon = icons.get(state, "[?]" if ascii_only else "⚪")
     label = _STATE_LABELS.get(state, state)
     lines = [
         "Windows-MCP 只读诊断报告",
@@ -73,7 +74,7 @@ def render_human_report(report: dict[str, Any]) -> str:
             if not isinstance(item, dict):
                 continue
             status = item.get("status")
-            item_icon = "🟢" if status == "ok" else "🔴"
+            item_icon = ("[OK]" if status == "ok" else "[FAIL]") if ascii_only else ("🟢" if status == "ok" else "🔴")
             detail = item.get("error") if status == "failed" else "检查通过"
             lines.append(f"  {item_icon} {item.get('tool', 'unknown')}: {detail}")
     else:

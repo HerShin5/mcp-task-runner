@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Sequence
 
@@ -44,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     report = sub.add_parser("windows-report", help="run reviewed read-only Windows-MCP checks")
     _add_endpoint_options(report)
     report.add_argument("--format", choices=["json", "text"], default="json")
+    report.add_argument("--ascii", action="store_true", help="use ASCII status markers for legacy Windows consoles")
 
     plan = sub.add_parser("diagnose-plan", help="print the read-only Windows-MCP diagnostic plan")
     plan.add_argument("--url", default="http://127.0.0.1:8766/mcp")
@@ -131,7 +133,8 @@ def run(argv: Sequence[str] | None = None) -> int:
         raw_report = collect_read_only_report(_client_from_args(args))
         report = normalize_health_report(raw_report)
         if args.format == "text":
-            print(render_human_report(report))
+            ascii_only = args.ascii or (sys.stdout.encoding or "").lower() not in {"utf-8", "utf8"}
+            print(render_human_report(report, ascii_only=ascii_only))
         else:
             print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0

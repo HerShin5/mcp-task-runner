@@ -68,4 +68,6 @@
 - Next: add real route-model classifier wiring and prepare the first safe end-to-end gateway test.
 - Real low-risk gateway integration completed: router classifier returned structured requirements for Windows-MCP port diagnostics; planner returned a validated read-only `health` plan with `requires_approval=false`. No tools or side effects were executed.
 - Real planner metrics were captured locally for telemetry validation only; private gateway names, domains, model routes, and account data are deliberately excluded from the public repository.
+- Real Windows-MCP report run completed in read-only mode: protocol `2025-06-18`, 13 discovered tools, `debug_nodes` and `screenshot` passed, `snapshot` timed out; normalized result was `degraded`, with no desktop mutation.
+- Added console-safe text rendering: UTF-8 consoles keep emoji markers; legacy Windows encodings automatically use `[OK]`, `[WARN]`, and `[FAIL]`.
 - Public example provider config was sanitized to generic placeholders before the first commit.

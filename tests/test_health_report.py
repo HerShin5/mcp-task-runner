@@ -40,5 +40,7 @@ def test_human_report_contains_chinese_status_and_safety_boundary():
     })
     text = render_human_report(report)
     assert "🟢 健康" in text
+    ascii_text = render_human_report(report, ascii_only=True)
+    assert "[OK] 健康" in ascii_text
     assert "安全说明" in text
     assert "未点击" in text
