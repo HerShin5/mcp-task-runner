@@ -177,7 +177,7 @@ Copy `providers.example.json` to a local `providers.json` and fill in your own v
 }
 ```
 
-The project does not require a specific model vendor. Users can configure OpenAI-compatible gateways and add their own models, providers, group keys, pricing, and model capability profiles.
+The project does not require a specific model vendor. Users can configure OpenAI-compatible gateways and add their own models, providers, group keys, pricing, and model capability profiles. The control API supports `MCP_TASK_RUNNER_API_TOKEN` Bearer authentication and approval state can be persisted in SQLite.
 
 ## CLI and local API
 
@@ -194,7 +194,9 @@ The dependency-free development API exposes:
 ```text
 GET  /health
 GET  /diagnostic-plan
+GET  /approval-demo/pending
 POST /approval-demo
+POST /approval-callback
 ```
 
 Start it with:

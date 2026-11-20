@@ -30,4 +30,13 @@ cp .env.example .env.local
 docker compose -f docker-compose.example.yml up -d --build
 ```
 
-本项目当前没有生产级认证实现；上线前必须补 Webhook 签名验证、请求鉴权、限流、审计留存和回滚方案。
+当前开发 API 已支持 `MCP_TASK_RUNNER_API_TOKEN` Bearer 鉴权和 SQLite 审批状态持久化，但仍不是完整生产安全方案。
+
+上线前必须补：
+
+- 飞书 Webhook 签名/加密校验；
+- 反向代理 HTTPS；
+- 限流和防重放；
+- 审计留存和备份；
+- 数据库权限与回滚方案；
+- 只暴露健康检查和审批回调，不暴露任意执行入口。

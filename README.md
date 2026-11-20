@@ -164,7 +164,7 @@ python -m mcp_task_runner.cli live-plan "检查 Windows-MCP 并提出修复计�
 }
 ```
 
-API Key、group key、管理 Token 和 Cookie 只能放在本机配置或密钥存储中。
+API Key、group key、管理 Token 和 Cookie 只能放在本机配置或密钥存储中。控制 API 支持 `MCP_TASK_RUNNER_API_TOKEN` Bearer 鉴权；审批状态支持 SQLite 持久化。
 
 ## CLI 与本地 API
 
@@ -203,8 +203,7 @@ python -m mcp_task_runner.cli approval-demo --approve
 - `deploy/Caddyfile.example`
 - `deploy/DEPLOYMENT.zh-CN.md`
 
-部署时要和 KiroForge 生产服务、生产数据库隔离。当前 API 仍是开发适配器，不是生产级控制面；公网使用前必须补 HTTPS、Webhook 签名校验、鉴权、限流和审计留存。
-
+部署时要和 KiroForge 生产服务、生产数据库隔离。当前 API 仍是开发适配器，不是生产级控制面；公网使用前必须补 HTTPS、Webhook 签名校验、鉴权、限流、防重放和审计留存。
 ## 项目状态
 
 当前是活跃的 MVP/研究版本：核心路由、模型能力档案、质量信号、结构化计划、审批接口、Windows-MCP 只读客户端和测试已经具备；飞书生产审批、更多网关管理面适配、跨平台适配和完整控制台仍在后续开发。
