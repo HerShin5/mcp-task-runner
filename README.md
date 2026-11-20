@@ -108,6 +108,8 @@ MCP Task Runner 把这些问题变成明确的运行时决策，而不是隐藏�
 
 第一版 Windows-MCP 适配器以只读方式连接已经运行的 Streamable HTTP MCP 服务，检查 MCP 初始化和工具目录。本地进程/端口诊断与 MCP 协议发现分开处理。诊断计划不会启动服务，也不会操作桌面。
 
+Discovered MCP tools are imported into a local registry with fail-closed risk metadata. The first allowlist covers safe discovery tools such as `snapshot`, `screenshot`, and `debug_nodes`; input tools such as `click`, `type_text`, and `key` remain destructive until a reviewed adapter policy and approval flow explicitly enable them.
+
 ## 快速开始
 
 ```powershell
