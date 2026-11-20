@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from http.client import HTTPResponse
+from time import sleep
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -59,11 +60,32 @@ class StreamableHttpMcpClient:
             raise McpProtocolError("tools/list response has no tools list")
         return [tool for tool in tools if isinstance(tool, dict)]
 
-    def call_read_only(self, tool_name: str, arguments: dict[str, Any], *, allowed_tools: set[str]) -> Any:
+    def call_read_only(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        *,
+        allowed_tools: set[str],
+        retries: int = 1,
+        retry_delay: float = 0.25,
+    ) -> Any:
+        """Call an allowlisted read-only tool with bounded timeout retries.
+
+        Retries are safe here because the local policy only permits reviewed
+        read-only tools. Write/destructive tools never pass this method.
+        """
         self._require_initialized()
         if tool_name not in allowed_tools:
             raise PermissionError(f"tool is not in the read-only allowlist: {tool_name}")
-        return self._rpc("tools/call", {"name": tool_name, "arguments": arguments})
+        attempts = max(0, retries) + 1
+        for attempt in range(attempts):
+            try:
+                return self._rpc("tools/call", {"name": tool_name, "arguments": arguments})
+            except McpProtocolError:
+                if attempt >= attempts - 1:
+                    raise
+                sleep(max(0.0, retry_delay) * (attempt + 1))
+        raise McpProtocolError(f"read-only tool did not return: {tool_name}")
 
     def _require_initialized(self) -> None:
         if not self._initialized:

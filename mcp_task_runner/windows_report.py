@@ -25,6 +25,7 @@ def collect_read_only_report(
     client: StreamableHttpMcpClient,
     *,
     allowed_tools: frozenset[str] = DEFAULT_READ_ONLY_TOOLS,
+    retries: int = 1,
 ) -> dict[str, Any]:
     """Initialize, discover, and call only reviewed read-only tools."""
     initialization = client.initialize()
@@ -34,7 +35,7 @@ def collect_read_only_report(
 
     for tool_name in sorted(discovered_names & allowed_tools):
         try:
-            value = client.call_read_only(tool_name, {}, allowed_tools=set(allowed_tools))
+            value = client.call_read_only(tool_name, {}, allowed_tools=set(allowed_tools), retries=retries)
             results.append(DiagnosticResult(tool_name, "ok", value=value))
         except Exception as exc:  # report one failed check without running another class of tool
             results.append(DiagnosticResult(tool_name, "failed", error=str(exc)))

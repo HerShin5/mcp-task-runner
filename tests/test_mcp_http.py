@@ -1,5 +1,4 @@
 import json
-from io import BytesIO
 from unittest.mock import patch
 
 from mcp_task_runner.mcp_http import McpEndpoint, StreamableHttpMcpClient
@@ -42,6 +41,15 @@ def test_read_only_call_requires_allowlist():
         client = StreamableHttpMcpClient(McpEndpoint("http://example.invalid/mcp"))
         client._initialized = True
         assert client.call_read_only("health", {}, allowed_tools={"health"}) == {"ok": True}
+
+
+def test_read_only_call_retries_protocol_timeout():
+    responses = [TimeoutError("timeout"), FakeResponse({"result": {"ok": True}})]
+    with patch("mcp_task_runner.mcp_http.urlopen", side_effect=responses):
+        client = StreamableHttpMcpClient(McpEndpoint("http://example.invalid/mcp"))
+        client._initialized = True
+        with patch("mcp_task_runner.mcp_http.sleep"):
+            assert client.call_read_only("health", {}, allowed_tools={"health"}, retries=1) == {"ok": True}
 
 
 def test_diagnostic_plan_is_read_only_and_does_not_call_network():
