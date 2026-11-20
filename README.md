@@ -172,6 +172,7 @@ API Key、group key、管理 Token 和 Cookie 只能放在本机配置或密钥�
 python -m mcp_task_runner.cli providers-health --config providers.json
 python -m mcp_task_runner.cli route-select --config providers.json --input-tokens 120000 --output-tokens 8000
 python -m mcp_task_runner.cli mcp-tools --url http://127.0.0.1:8766/mcp --token-file C:\path\to\mcp-auth-key.txt
+python -m mcp_task_runner.cli windows-report --url http://127.0.0.1:8766/mcp --token-file C:\path\to\mcp-auth-key.txt
 python -m mcp_task_runner.cli approval-demo
 python -m mcp_task_runner.cli approval-demo --approve
 ```

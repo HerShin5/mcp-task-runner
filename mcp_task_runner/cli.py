@@ -15,6 +15,7 @@ from .planner import PlanValidationError, parse_and_validate
 from .model_client import ModelClientError, ModelReply, OpenAICompatibleClient
 from .routing import PricingBand, RouteObjective, RoutePricing, load_route_pricing, select_route
 from .windows_diagnostics import build_read_only_plan, discover_endpoint
+from .windows_report import collect_read_only_report
 from .capabilities import ModelProfile, load_model_profiles
 from .classifier import HeuristicTaskClassifier
 from .model_routing import choose_model_and_gateway
@@ -38,6 +39,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     tools = sub.add_parser("mcp-tools", help="discover tools from an already-running MCP endpoint")
     _add_endpoint_options(tools)
+
+    report = sub.add_parser("windows-report", help="run reviewed read-only Windows-MCP checks")
+    _add_endpoint_options(report)
 
     plan = sub.add_parser("diagnose-plan", help="print the read-only Windows-MCP diagnostic plan")
     plan.add_argument("--url", default="http://127.0.0.1:8766/mcp")
@@ -119,6 +123,11 @@ def run(argv: Sequence[str] | None = None) -> int:
             for item in registered
         ]
         print(json.dumps(discovery, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.command == "windows-report":
+        report = collect_read_only_report(_client_from_args(args))
+        print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0
 
     if args.command == "diagnose-plan":
