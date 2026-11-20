@@ -1,5 +1,6 @@
 from mcp_task_runner.providers import ProviderConfig, ProviderHealth
 from mcp_task_runner.routing import PricingBand, RouteObjective, RoutePricing, select_route
+from mcp_task_runner.management import GroupSnapshot, ManagementSnapshot, ModelSnapshot
 
 
 def test_cost_route_uses_actual_input_output_bands():
@@ -46,3 +47,27 @@ def test_latency_objective_can_override_cost():
     ]
     decision = select_route(providers, health, pricing, input_tokens=1, output_tokens=1, objective=RouteObjective.LATENCY)
     assert decision.selected.provider.name == "fast"
+
+
+def test_management_snapshot_filters_missing_model_and_applies_multiplier():
+    provider = ProviderConfig("managed", "https://managed/v1", "model")
+    health = [ProviderHealth("managed", True, 200, "ok", "model", True, 30)]
+    pricing = [RoutePricing("managed", "model", PricingBand(1, 1))]
+    management = ManagementSnapshot("managed", (
+        GroupSnapshot("disabled", "disabled", "openai", False, 1, (ModelSnapshot("model"),)),
+        GroupSnapshot("live", "live", "openai", True, 2, (ModelSnapshot("model"),), error_rate=0.1, health_state="healthy"),
+    ))
+    decision = select_route([provider], health, pricing, input_tokens=2, output_tokens=1, management=[management])
+    assert decision.selected.management.group.id == "live"
+    assert decision.selected.estimated_cost == 6
+
+
+def test_management_snapshot_blocks_provider_when_no_usable_group():
+    provider = ProviderConfig("managed", "https://managed/v1", "model")
+    health = [ProviderHealth("managed", True, 200, "ok", "model", True, 30)]
+    pricing = [RoutePricing("managed", "model", PricingBand(1, 1))]
+    management = ManagementSnapshot("managed", (
+        GroupSnapshot("down", "down", "openai", True, 1, (ModelSnapshot("model"),), health_state="blocked"),
+    ))
+    decision = select_route([provider], health, pricing, input_tokens=1, output_tokens=1, management=[management])
+    assert decision.selected is None

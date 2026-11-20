@@ -9,6 +9,7 @@ from pathlib import Path
 from math import inf
 from typing import Iterable
 
+from .management import ManagementRoute, ManagementSnapshot, resolve_management_route
 from .providers import ProviderConfig, ProviderHealth
 
 
@@ -68,6 +69,7 @@ class RouteCandidate:
     health: ProviderHealth
     estimated_cost: float
     score: float
+    management: ManagementRoute | None = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +89,7 @@ def select_route(
     objective: RouteObjective = RouteObjective.COST,
     latency_weight: float = 0.001,
     unknown_threshold_policy: str = "conservative",
+    management: Iterable[ManagementSnapshot] = (),
 ) -> RouteDecision:
     """Select an available route using explicit pricing and health evidence.
 
@@ -98,6 +101,7 @@ def select_route(
     provider_map = {provider.name: provider for provider in providers if provider.enabled}
     health_map = {item.name: item for item in health}
     pricing_map = {(item.provider_name, item.model): item for item in pricing}
+    management_map = {item.provider: item for item in management}
     candidates: list[RouteCandidate] = []
 
     for name, provider in provider_map.items():
@@ -109,19 +113,27 @@ def select_route(
         route_pricing = pricing_map.get((name, provider.model))
         if route_pricing is None:
             continue
+        management_route = resolve_management_route(management_map.get(name), provider.model)
+        snapshot = management_map.get(name)
+        if snapshot is not None and snapshot.groups and management_route is None:
+            continue
         estimated_cost = route_pricing.estimate(
             input_tokens,
             output_tokens,
             unknown_policy=unknown_threshold_policy,
         )
+        if management_route is not None:
+            estimated_cost *= management_route.rate_multiplier
+        error_rate = management_route.group.error_rate if management_route is not None else None
+        reliability_factor = 1.0 + min(max(error_rate or 0.0, 0.0), 1.0)
         latency_ms = status.latency_ms if status.latency_ms is not None else 10_000
         if objective is RouteObjective.LATENCY:
-            score = float(latency_ms)
+            score = float(latency_ms) * reliability_factor
         elif objective is RouteObjective.BALANCED:
-            score = estimated_cost + latency_weight * latency_ms
+            score = estimated_cost * reliability_factor + latency_weight * latency_ms
         else:
-            score = estimated_cost
-        candidates.append(RouteCandidate(provider, route_pricing, status, estimated_cost, score))
+            score = estimated_cost * reliability_factor
+        candidates.append(RouteCandidate(provider, route_pricing, status, estimated_cost, score, management_route))
 
     candidates.sort(key=lambda item: (item.score, item.health.latency_ms if item.health.latency_ms is not None else inf, item.provider.priority))
     selected = candidates[0] if candidates else None

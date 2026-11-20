@@ -64,4 +64,5 @@ class GatewayCatalog:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             objective=objective,
+            management=self.management.values(),
         )

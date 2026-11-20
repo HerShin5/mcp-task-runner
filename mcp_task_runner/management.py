@@ -52,6 +52,24 @@ class ManagementSnapshot:
     observed_at: str | None = None
 
 
+@dataclass(frozen=True)
+class ManagementRoute:
+    group: GroupSnapshot
+    model: ModelSnapshot
+    rate_multiplier: float
+
+
+_BLOCKED_STATES = frozenset({
+    "blocked",
+    "disabled",
+    "down",
+    "exhausted",
+    "offline",
+    "suspended",
+    "unhealthy",
+})
+
+
 def _number(value: Any) -> float | None:
     try:
         return float(value) if value is not None else None
@@ -64,6 +82,29 @@ def _integer(value: Any) -> int | None:
         return int(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+def resolve_management_route(snapshot: ManagementSnapshot | None, model_name: str) -> ManagementRoute | None:
+    """Resolve a model to an enabled, usable management-plane group.
+
+    A snapshot with no groups means metadata is unavailable and is therefore
+    non-binding. Once groups are reported, absence or a blocked state is
+    treated conservatively and excludes that provider/model pair.
+    """
+    if snapshot is None or not snapshot.groups:
+        return None
+    matches: list[ManagementRoute] = []
+    for group in snapshot.groups:
+        state = str(group.health_state or "").strip().lower().replace("-", "_")
+        if not group.enabled or state in _BLOCKED_STATES:
+            continue
+        for model in group.models:
+            if model.name != model_name or not model.enabled:
+                continue
+            group_multiplier = group.rate_multiplier if group.rate_multiplier and group.rate_multiplier > 0 else 1.0
+            model_multiplier = model.rate_multiplier if model.rate_multiplier and model.rate_multiplier > 0 else 1.0
+            matches.append(ManagementRoute(group, model, group_multiplier * model_multiplier))
+    return min(matches, key=lambda item: (item.rate_multiplier, item.group.id)) if matches else None
 
 
 def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> ManagementSnapshot:
@@ -118,5 +159,7 @@ def snapshot_from_generic_payload(provider: str, payload: dict[str, Any]) -> Man
 
 def load_snapshot_fixture(path: str | Path, *, provider: str | None = None) -> ManagementSnapshot:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        payload = {}
     inferred_provider = payload.get("provider") if isinstance(payload, dict) else None
     return snapshot_from_generic_payload(provider or str(inferred_provider or "fixture"), payload)

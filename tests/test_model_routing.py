@@ -2,6 +2,7 @@ from mcp_task_runner.capabilities import ModelProfile, TaskRequirements
 from mcp_task_runner.model_routing import choose_model_and_gateway
 from mcp_task_runner.providers import ProviderConfig, ProviderHealth
 from mcp_task_runner.routing import PricingBand, RoutePricing
+from mcp_task_runner.management import GroupSnapshot, ManagementSnapshot, ModelSnapshot
 
 
 def test_joint_router_filters_capability_before_price():
@@ -25,3 +26,21 @@ def test_joint_router_filters_capability_before_price():
     decision = choose_model_and_gateway(profiles, providers, health, pricing, requirements, input_tokens=10, output_tokens=10)
     assert decision.selected.model.name == "expensive-capable"
     assert decision.selected.provider.name == "expensive-gateway"
+
+
+def test_joint_router_uses_management_model_and_group_metadata():
+    profile = ModelProfile("model", {"tool_calling": 4})
+    provider = ProviderConfig("gateway", "https://gateway/v1", "model")
+    health = [ProviderHealth("gateway", True, 200, "ok", "model", True, 20)]
+    pricing = [RoutePricing("gateway", "model", PricingBand(1, 1))]
+    management = [ManagementSnapshot("gateway", (
+        GroupSnapshot("live", "live", "openai", True, 0.5, (ModelSnapshot("model"),), health_state="healthy"),
+    ))]
+    decision = choose_model_and_gateway(
+        [profile], [provider], health, pricing,
+        TaskRequirements("ops", {"tool_calling": 4}),
+        input_tokens=2, output_tokens=1, management=management,
+    )
+    assert decision.selected.provider.name == "gateway"
+    assert decision.selected.estimated_cost == 1.5
+    assert decision.selected.management.group.id == "live"

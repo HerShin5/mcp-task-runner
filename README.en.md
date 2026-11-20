@@ -181,6 +181,8 @@ The project does not require a specific model vendor. Users can configure OpenAI
 
 Management-plane data can be attached through a redacted snapshot. For local development, a `providers.management.json` file next to `providers.json` can describe groups, models, pricing multipliers, health, balance, and concurrency without storing tokens. See `examples/management-snapshot.example.json`. A production adapter should update the same snapshot shape only through an authorized management API; management failures must not bypass ordinary gateway health checks.
 
+When attached to routing, disabled, blocked, offline, or model-missing groups are excluded; group/model multipliers affect estimated cost and reported error rates add a reliability penalty. Without a management snapshot, the existing health probe and manual pricing configuration remain the source of truth, so a temporary management-plane outage does not silently authorize a route.
+
 ## CLI and local API
 
 ```powershell

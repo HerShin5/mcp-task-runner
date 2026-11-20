@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from .capabilities import ModelProfile, TaskRequirements
+from .management import ManagementRoute, ManagementSnapshot, resolve_management_route
 from .providers import ProviderConfig, ProviderHealth
 from .quality import QualityAssessment, QualityState
 from .routing import PricingBand, RoutePricing
@@ -19,6 +20,7 @@ class ModelRouteCandidate:
     pricing: RoutePricing
     estimated_cost: float
     quality_score: float = 100.0
+    management: ManagementRoute | None = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,7 @@ def choose_model_and_gateway(
     input_tokens: int,
     output_tokens: int,
     quality: Iterable[QualityAssessment] = (),
+    management: Iterable[ManagementSnapshot] = (),
 ) -> ModelRouteDecision:
     """Choose a capable model and a healthy provider for that model.
 
@@ -56,6 +59,7 @@ def choose_model_and_gateway(
     health_map = {item.name: item for item in health}
     pricing_map = {(item.provider_name, item.model): item for item in pricing}
     quality_map = {item.route: item for item in quality}
+    management_map = {item.provider: item for item in management}
     candidates: list[ModelRouteCandidate] = []
 
     for model_name, profile in profile_map.items():
@@ -78,14 +82,22 @@ def choose_model_and_gateway(
             route_pricing = pricing_map.get((provider.name, model_name))
             if route_pricing is None:
                 continue
+            management_route = resolve_management_route(management_map.get(provider.name), model_name)
+            snapshot = management_map.get(provider.name)
+            if snapshot is not None and snapshot.groups and management_route is None:
+                continue
+            estimated_cost = route_pricing.estimate(input_tokens, output_tokens)
+            if management_route is not None:
+                estimated_cost *= management_route.rate_multiplier
             candidates.append(
                 ModelRouteCandidate(
                     model=profile,
                     provider=provider,
                     health=status,
                     pricing=route_pricing,
-                    estimated_cost=route_pricing.estimate(input_tokens, output_tokens),
+                    estimated_cost=estimated_cost,
                     quality_score=assessment.score if assessment is not None else 100.0,
+                    management=management_route,
                 )
             )
 
@@ -101,7 +113,9 @@ def choose_model_and_gateway(
         quality_penalty = 0.0
         if assessment is not None and assessment.should_deprioritize:
             quality_penalty = 1.0
-        return (candidate.estimated_cost - quality_discount + latency_penalty + quality_penalty, latency, candidate.provider.priority)
+        error_rate = candidate.management.group.error_rate if candidate.management is not None else None
+        reliability_penalty = candidate.estimated_cost * min(max(error_rate or 0.0, 0.0), 1.0)
+        return (candidate.estimated_cost + reliability_penalty - quality_discount + latency_penalty + quality_penalty, latency, candidate.provider.priority)
 
     candidates.sort(key=score)
     return ModelRouteDecision(candidates[0], tuple(candidates), "selected capable model/provider pair by cost, quality, latency, and priority")

@@ -168,6 +168,8 @@ API Key、group key、管理 Token 和 Cookie 只能放在本机配置或密钥�
 
 网关管理面可以通过脱敏快照接入。若配置文件是 `providers.json`，本地开发时可放置同目录的 `providers.management.json`；快照只保存分组、模型、倍率、健康、余额和并发等元数据，不保存 Token。示例见 `examples/management-snapshot.example.json`。真实后台适配器应在授权的管理 API 边界内更新同一快照结构，读取失败不能绕过普通网关健康检查。
 
+快照接入路由后，禁用、阻断、下线或找不到目标模型的分组会被排除；分组/模型倍率会进入成本估算，错误率会增加可靠性惩罚。没有管理快照时仍沿用原有健康检查和手动价格配置，不会因为管理面暂时不可用而误放行。
+
 ## CLI 与本地 API
 
 ```powershell

@@ -6,6 +6,7 @@
 - Clarified that model, gateway, API key, Base URL, group key, and management credentials are user-provided configuration.
 - Added CI, MIT license, architecture, security, and contribution documentation.
 - Added a provider-neutral management snapshot seam and optional catalog fixture loading.
+- Management snapshots now affect ordinary and joint model/gateway routing with fail-closed group/model filtering, multiplier-aware cost, and error-rate penalties.
 
 ## 0.1.0 MVP
 

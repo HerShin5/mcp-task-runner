@@ -27,7 +27,7 @@ from .plan_executor import PlanExecutionResult, execute_read_only_plan
 from .windows_workflow import WindowsWorkflowResult, run_read_only_workflow
 from .failover import CircuitBreaker, CircuitState, FailoverResult, execute_with_failover, is_retryable_error
 from .routed_client import RoutedChatResult, RoutedModelClient
-from .management import AccountSnapshot, GroupSnapshot, ManagementSnapshot, ModelSnapshot, load_snapshot_fixture, snapshot_from_generic_payload
+from .management import AccountSnapshot, GroupSnapshot, ManagementRoute, ManagementSnapshot, ModelSnapshot, load_snapshot_fixture, resolve_management_route, snapshot_from_generic_payload
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -138,9 +138,11 @@ __all__ = [
     "RoutedModelClient",
     "AccountSnapshot",
     "GroupSnapshot",
+    "ManagementRoute",
     "ManagementSnapshot",
     "ModelSnapshot",
     "load_snapshot_fixture",
+    "resolve_management_route",
     "snapshot_from_generic_payload",
     "HeuristicTaskClassifier",
 ]
