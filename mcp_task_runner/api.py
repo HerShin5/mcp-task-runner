@@ -7,6 +7,7 @@ It is not production auth or a final web console.
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -44,6 +45,13 @@ class ApiState:
 
 def make_handler(state: ApiState):
     class Handler(BaseHTTPRequestHandler):
+        def _authorized(self) -> bool:
+            expected = os.getenv("MCP_TASK_RUNNER_API_TOKEN")
+            if not expected:
+                return True
+            provided = self.headers.get("Authorization", "")
+            return provided == f"Bearer {expected}"
+
         def _json(self, status: int, payload: dict[str, Any]) -> None:
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
@@ -53,7 +61,11 @@ def make_handler(state: ApiState):
             self.wfile.write(body)
 
         def do_GET(self):  # noqa: N802
+            if not self._authorized():
+                self._json(401, {"error": "unauthorized"})
+                return
             if self.path == "/health":
+
                 self._json(200, {"ok": True, "service": "mcp-task-runner", "mode": "development"})
                 return
             if self.path == "/approval-demo/pending":
@@ -65,6 +77,9 @@ def make_handler(state: ApiState):
             self._json(404, {"error": "not found"})
 
         def do_POST(self):  # noqa: N802
+            if not self._authorized():
+                self._json(401, {"error": "unauthorized"})
+                return
             if self.path == "/approval-callback":
                 length = int(self.headers.get("Content-Length", "0"))
                 raw = self.rfile.read(length) if length else b"{}"
