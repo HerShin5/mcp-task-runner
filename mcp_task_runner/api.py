@@ -19,10 +19,14 @@ from .windows_diagnostics import build_read_only_plan
 
 
 class ApiState:
-    def __init__(self) -> None:
+    def __init__(self, *, allowed_approvers: set[str] | None = None) -> None:
         self.approvals = ApprovalStore()
         self.evidence = EvidenceLog()
-        self.callback_handler = ApprovalCallbackHandler(self.approvals)
+        if allowed_approvers is None:
+            allowed_approvers = {
+                item.strip() for item in os.getenv("MCP_TASK_RUNNER_APPROVERS", "").split(",") if item.strip()
+            }
+        self.callback_handler = ApprovalCallbackHandler(self.approvals, allowed_approvers=allowed_approvers)
 
     def create_pending_demo(self) -> dict[str, Any]:
         """Create a pending request for local callback testing only."""
@@ -49,7 +53,8 @@ def make_handler(state: ApiState):
         def _authorized(self) -> bool:
             expected = os.getenv("MCP_TASK_RUNNER_API_TOKEN")
             if not expected:
-                return True
+                # Development mode is loopback-only when no bearer secret is configured.
+                return self.client_address[0] in {"127.0.0.1", "::1"}
             provided = self.headers.get("Authorization", "")
             return provided == f"Bearer {expected}"
 
@@ -86,7 +91,8 @@ def make_handler(state: ApiState):
                 raw = self.rfile.read(length) if length else b"{}"
                 try:
                     payload = json.loads(raw)
-                    result = state.callback_handler.handle(payload, approver=str(payload.get("approver", "unknown")))
+                    approver = self.headers.get("X-Approver-Id", "")
+                    result = state.callback_handler.handle(payload, approver=approver)
                 except (json.JSONDecodeError, AttributeError):
                     self._json(400, {"accepted": False, "status": "invalid", "message": "body must be JSON"})
                     return
@@ -99,7 +105,10 @@ def make_handler(state: ApiState):
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 payload = json.loads(raw)
-                approved = bool(payload.get("approved", False))
+                approved = payload.get("approved", False)
+                if not isinstance(approved, bool):
+                    self._json(400, {"error": "approved must be a JSON boolean"})
+                    return
             except (json.JSONDecodeError, AttributeError):
                 self._json(400, {"error": "body must be JSON"})
                 return

@@ -56,7 +56,9 @@ class OpenAICompatibleClient:
         started = perf_counter()
         try:
             with urlopen(request, timeout=self.timeout) as response:
-                status = getattr(response, "status", response.getcode())
+                status = getattr(response, "status", None)
+                if status is None:
+                    status = response.getcode()
                 body = json.loads(response.read().decode("utf-8"))
         except HTTPError as exc:
             raise ModelClientError(f"model request rejected: HTTP {exc.code}") from exc

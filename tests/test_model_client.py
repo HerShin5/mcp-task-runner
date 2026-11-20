@@ -23,6 +23,10 @@ class FakeResponse:
         }).encode()
 
 
+class StatusOnlyResponse(FakeResponse):
+    getcode = None
+
+
 def test_openai_compatible_client_parses_non_streaming_reply():
     client = OpenAICompatibleClient(
         base_url="https://example.invalid/v1",
@@ -35,3 +39,9 @@ def test_openai_compatible_client_parses_non_streaming_reply():
     assert reply.text.startswith("{")
     assert reply.usage["prompt_tokens"] == 3
     assert reply.provider == "fake"
+
+
+def test_model_client_accepts_response_with_status_but_no_getcode():
+    client = OpenAICompatibleClient(base_url="https://example.invalid/v1", api_key=None, provider="fake", model="model")
+    with patch("mcp_task_runner.model_client.urlopen", return_value=StatusOnlyResponse()):
+        assert client.chat([{"role": "user", "content": "check"}]).status_code == 200
