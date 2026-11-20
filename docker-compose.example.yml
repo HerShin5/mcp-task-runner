@@ -1,0 +1,19 @@
+services:
+  mcp-task-runner:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    ports:
+      - "127.0.0.1:8767:8767"
+    volumes:
+      - ./runtime:/app/runtime
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+# Put a reverse proxy (Caddy/Nginx) in front of this service for HTTPS and
+# expose only webhook/health endpoints. Keep production KiroForge services
+# and databases in separate containers/network policies.

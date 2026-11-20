@@ -193,6 +193,18 @@ python -m mcp_task_runner.cli approval-demo --approve
 - [Security / 安全](SECURITY.md)
 - [Contributing / 贡献](CONTRIBUTING.md)
 
+## 部署模板
+
+仓库包含未来控制面部署模板：
+
+- `Dockerfile`
+- `docker-compose.example.yml`
+- `.env.example`
+- `deploy/Caddyfile.example`
+- `deploy/DEPLOYMENT.zh-CN.md`
+
+部署时要和 KiroForge 生产服务、生产数据库隔离。当前 API 仍是开发适配器，不是生产级控制面；公网使用前必须补 HTTPS、Webhook 签名校验、鉴权、限流和审计留存。
+
 ## 项目状态
 
 当前是活跃的 MVP/研究版本：核心路由、模型能力档案、质量信号、结构化计划、审批接口、Windows-MCP 只读客户端和测试已经具备；飞书生产审批、更多网关管理面适配、跨平台适配和完整控制台仍在后续开发。

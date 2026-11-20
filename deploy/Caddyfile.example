@@ -1,0 +1,6 @@
+runner.example.com {
+    reverse_proxy 127.0.0.1:8767
+
+    # Add an authentication layer before exposing approval callbacks.
+    # Do not publish the raw development server directly.
+}
