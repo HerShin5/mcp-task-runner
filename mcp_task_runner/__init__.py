@@ -24,6 +24,7 @@ from .mock_executor import MockApprovedExecutor, MockExecutionResult
 from .approval_demo import run_local_approval_demo
 from .persistence import SQLiteApprovalStore
 from .plan_executor import PlanExecutionResult, execute_read_only_plan
+from .windows_workflow import WindowsWorkflowResult, run_read_only_workflow
 from .classifier import HeuristicTaskClassifier
 from .core import (
     ApprovalDecision,
@@ -123,5 +124,7 @@ __all__ = [
     "SQLiteApprovalStore",
     "PlanExecutionResult",
     "execute_read_only_plan",
+    "WindowsWorkflowResult",
+    "run_read_only_workflow",
     "HeuristicTaskClassifier",
 ]
